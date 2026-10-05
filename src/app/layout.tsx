@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "@/lib/Providers";
 import "./globals.css";
+import "react-toastify/dist/ReactToastify.css";
 
 export const metadata: Metadata = {
   title: "Mapeia Focos",
