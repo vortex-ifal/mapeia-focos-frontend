@@ -1,5 +1,21 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+
+const nextConfig: NextConfig = {
+  async rewrites() {
+    if (!backendUrl) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl.replace(/\/+$/, "")}/api/:path*`,
+      },
+    ];
+  },
+};
 
 export default nextConfig;
+

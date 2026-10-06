@@ -40,41 +40,7 @@ function parseDraft(snapshot: string | null): OccurrenceFormData | null {
   }
 }
 
-function parseContact(contato?: string) {
-  let nome = "";
-  let email = "";
-  let telefone = "";
 
-  if (!contato) {
-    return {
-      nome,
-      email,
-      telefone,
-    };
-  }
-
-  const parts = contato.split(" | ");
-
-  for (const part of parts) {
-    if (part.startsWith("Nome: ")) {
-      nome = part.replace("Nome: ", "");
-    }
-
-    if (part.startsWith("E-mail: ")) {
-      email = part.replace("E-mail: ", "");
-    }
-
-    if (part.startsWith("Telefone: ")) {
-      telefone = part.replace("Telefone: ", "");
-    }
-  }
-
-  return {
-    nome,
-    email,
-    telefone,
-  };
-}
 
 function TerritoryMap({ selected }: { selected: boolean }) {
   return (
@@ -123,48 +89,14 @@ function TerritoryMap({ selected }: { selected: boolean }) {
   );
 }
 
-function ContactField({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-}) {
-  return (
-    <label className="block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-      <span className="block text-[12px] font-semibold text-[#716B67]">
-        {label}
-      </span>
 
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
-      />
-    </label>
-  );
-}
 
 function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const router = useRouter();
 
-  const contactData = useMemo(
-    () => parseContact(draft?.contato),
-    [draft?.contato],
+  const [showContact, setShowContact] = useState(
+    Boolean(draft?.nome || draft?.email || draft?.telefone),
   );
-
-  const [showContact, setShowContact] = useState(Boolean(draft?.contato));
-
-  const [nome, setNome] = useState(contactData.nome);
-
-  const [email, setEmail] = useState(contactData.email);
-
-  const [telefone, setTelefone] = useState(contactData.telefone);
 
   const {
     register,
@@ -179,7 +111,9 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       endereco: draft?.endereco ?? "",
       tipo_situacao: draft?.tipo_situacao ?? "",
       descricao: draft?.descricao ?? "",
-      contato: draft?.contato ?? "",
+      nome: draft?.nome ?? "",
+      email: draft?.email ?? "",
+      telefone: draft?.telefone ?? "",
       evidencia_nome: draft?.evidencia_nome ?? "",
     },
   });
@@ -215,21 +149,16 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   }
 
   function onSubmit(data: OccurrenceSchema) {
-    const contato = [
-      nome ? `Nome: ${nome}` : "",
-      email ? `E-mail: ${email}` : "",
-      telefone ? `Telefone: ${telefone}` : "",
-    ]
-      .filter(Boolean)
-      .join(" | ");
-
     saveOccurrenceDraft({
       ...data,
-      contato: contato || undefined,
+      nome: showContact ? data.nome : undefined,
+      email: showContact ? data.email : undefined,
+      telefone: showContact ? data.telefone : undefined,
     });
 
     router.push("/nova-ocorrencia/revisar");
   }
+
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
@@ -435,25 +364,43 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
             {showContact && (
               <div className="mt-[12px] space-y-[10px]">
-                <ContactField
-                  label="Nome (opcional)"
-                  value={nome}
-                  onChange={setNome}
-                />
+                <label className="block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+                  <span className="block text-[12px] font-semibold text-[#716B67]">
+                    Nome (opcional)
+                  </span>
+                  <input
+                    {...register("nome")}
+                    type="text"
+                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
+                  />
+                </label>
 
-                <ContactField
-                  label="E-mail (opcional)"
-                  value={email}
-                  onChange={setEmail}
-                  type="email"
-                />
+                <label className="block rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+                  <span className="block text-[12px] font-semibold text-[#716B67]">
+                    E-mail (opcional)
+                  </span>
+                  <input
+                    {...register("email")}
+                    type="email"
+                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-[11px] text-red-600">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </label>
 
-                <ContactField
-                  label="Telefone (opcional)"
-                  value={telefone}
-                  onChange={setTelefone}
-                  type="tel"
-                />
+                <label className="block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+                  <span className="block text-[12px] font-semibold text-[#716B67]">
+                    Telefone (opcional)
+                  </span>
+                  <input
+                    {...register("telefone")}
+                    type="tel"
+                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
+                  />
+                </label>
               </div>
             )}
 

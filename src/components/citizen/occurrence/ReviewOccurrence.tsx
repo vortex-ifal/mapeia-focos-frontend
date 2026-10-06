@@ -93,11 +93,13 @@ export function ReviewOccurrence() {
     }
   }, [draftSnapshot]);
 
+  const [submitted, setSubmitted] = useState(false);
+
   useEffect(() => {
-    if (!draftSnapshot) {
+    if (!draftSnapshot && !submitted) {
       router.replace("/nova-ocorrencia");
     }
-  }, [draftSnapshot, router]);
+  }, [draftSnapshot, submitted, router]);
 
   async function handleSend() {
     if (!occurrence) {
@@ -106,8 +108,11 @@ export function ReviewOccurrence() {
 
     try {
       setIsSubmitting(true);
-
       await submitOccurrence(occurrence);
+      setSubmitted(true);
+      router.push("/");
+    } catch {
+      // Erro já notificado via toast no submitOccurrence
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +126,12 @@ export function ReviewOccurrence() {
     return null;
   }
 
-  const hasContact = Boolean(occurrence.contato?.trim());
+  const hasContact = Boolean(
+    occurrence.nome?.trim() ||
+      occurrence.email?.trim() ||
+      occurrence.telefone?.trim(),
+  );
+
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
