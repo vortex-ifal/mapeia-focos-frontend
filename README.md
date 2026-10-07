@@ -4,7 +4,7 @@ Fundação do frontend Mapeia Focos, organizada a partir da arquitetura do proje
 
 ## Requisitos
 
-- Node.js compatível com Next.js 16 (Node.js 20.9 ou superior)
+- Node.js 24 (conforme especificado no `.nvmrc` e `package.json`)
 - npm
 
 ## Comandos
