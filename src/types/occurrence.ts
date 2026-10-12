@@ -5,7 +5,7 @@ export type OccurrenceDraft = {
   nome?: string;
   email?: string;
   telefone?: string;
-  evidencia_nome?: string;
+  evidencia_nomes?: string[];
 };
 
 export type OccurrenceFormData = OccurrenceDraft;

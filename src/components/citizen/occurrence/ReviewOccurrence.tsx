@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, ImageIcon, Layers3 } from "lucide-react";
+import { ArrowLeft, ChevronDown, CircleCheck, ImageIcon, Layers3 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   getOccurrenceDraftSnapshot,
+  getPendingFiles,
   subscribeToOccurrenceDraft,
   submitOccurrence,
 } from "@/controllers/citizen/occurrence.controller";
@@ -95,6 +96,11 @@ export function ReviewOccurrence() {
 
   const [submitted, setSubmitted] = useState(false);
 
+  // Check if there are pending files in the in-memory store
+  const pendingFileCount = getPendingFiles().length;
+  const mediaNames = occurrence?.evidencia_nomes ?? [];
+  const hasMedia = mediaNames.length > 0;
+
   useEffect(() => {
     if (!draftSnapshot && !submitted) {
       router.replace("/nova-ocorrencia");
@@ -151,38 +157,72 @@ export function ReviewOccurrence() {
           </h1>
         </header>
 
-        <div className="mt-[14px]">
-          <ReviewMap />
-        </div>
+        <section className="mt-[14px]">
+          <h2 className="text-[20px] font-bold">Localização</h2>
 
-        <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-          <p className="text-[14px] font-bold">{occurrence.endereco}</p>
+          <div className="mt-[14px]">
+            <ReviewMap />
+          </div>
 
-          <p className="mt-1 text-[12px] text-[#716B67]">
-            Centro · terreno ao lado da praça
-          </p>
-        </div>
+          <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+            <p className="text-[14px] font-bold">{occurrence.endereco}</p>
+
+            <p className="mt-1 text-[12px] text-[#716B67]">
+              Centro · terreno ao lado da praça
+            </p>
+          </div>
+        </section>
 
         <section className="mt-[14px]">
           <h2 className="text-[20px] font-bold">Evidências</h2>
 
-          <div className="mt-[14px] flex h-[82px] w-[318px] items-start gap-3">
-            <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
-              <ImageIcon size={20} />
-            </div>
+          {hasMedia ? (
+            <>
+              {/* Success confirmation card - matching prototype */}
+              <div className="mt-[14px] flex h-[56px] items-center justify-center gap-2 rounded-[12px] border border-[#E9E0D4] bg-white">
+                <CircleCheck size={20} className="text-[#236B4D]" />
 
-            <div>
-              <p className="text-[14px] text-[#716B67]">
-                {occurrence.evidencia_nome || "Nenhuma mídia selecionada"}
-              </p>
+                <span className="text-[14px] font-semibold text-[#236B4D]">
+                  Mídia adicionada
+                </span>
+              </div>
 
-              {occurrence.evidencia_nome && (
-                <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
-                  Imagem selecionada · 1 arquivo
+              {/* File info cards */}
+              <div className="mt-[14px] space-y-[10px]">
+                {mediaNames.map((name, index) => (
+                  <div
+                    key={`${name}-${index}`}
+                    className="flex items-start gap-3"
+                  >
+                    <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                      <ImageIcon size={20} />
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-[14px] text-[#716B67]">{name}</p>
+
+                      <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
+                        Imagem selecionada · {mediaNames.length}{" "}
+                        arquivo{mediaNames.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-[14px] flex h-[82px] items-start gap-3">
+              <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                <ImageIcon size={20} />
+              </div>
+
+              <div className="pt-1">
+                <p className="text-[14px] text-[#716B67]">
+                  Nenhuma mídia selecionada
                 </p>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         <section className="mt-[14px]">

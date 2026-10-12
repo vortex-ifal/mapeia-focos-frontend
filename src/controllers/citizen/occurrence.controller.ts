@@ -1,6 +1,7 @@
 import { toast } from "react-toastify";
 
 import { createOccurrence } from "@/services/api/occurrence.service";
+import { uploadMedia } from "@/services/api/media.service";
 import type {
   OccurrenceFormData,
   OccurrenceResponse,
@@ -8,6 +9,20 @@ import type {
 
 const DRAFT_KEY = "mapeia-occurrence-draft";
 const DRAFT_EVENT = "mapeia-occurrence-draft-change";
+
+let pendingFiles: File[] = [];
+
+export function setPendingFiles(files: File[]) {
+  pendingFiles = files;
+}
+
+export function getPendingFiles(): File[] {
+  return pendingFiles;
+}
+
+export function clearPendingFiles() {
+  pendingFiles = [];
+}
 
 export function saveOccurrenceDraft(data: OccurrenceFormData) {
   if (typeof window === "undefined") {
@@ -47,7 +62,7 @@ export function getOccurrenceDraftSnapshot(): string | null {
 
 export function subscribeToOccurrenceDraft(callback: () => void) {
   if (typeof window === "undefined") {
-    return () => {};
+    return () => { };
   }
 
   window.addEventListener(DRAFT_EVENT, callback);
@@ -77,6 +92,22 @@ export async function submitOccurrence(
   try {
     const result = await createOccurrence(data);
 
+    const files = getPendingFiles();
+
+    if (files.length > 0 && result.id) {
+      try {
+        await uploadMedia(result.id, files);
+      } catch {
+        toast.warning(
+          "Ocorrência registrada, mas houve um erro ao enviar as mídias.",
+        );
+        clearPendingFiles();
+        clearOccurrenceDraft();
+        return result;
+      }
+    }
+
+    clearPendingFiles();
     clearOccurrenceDraft();
 
     toast.success("Ocorrência enviada com sucesso.");

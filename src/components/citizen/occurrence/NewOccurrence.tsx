@@ -7,22 +7,31 @@ import {
   CircleCheck,
   ImageIcon,
   Layers3,
+  Loader2,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { toast } from "react-toastify";
 
 import {
   getOccurrenceDraftSnapshot,
   saveOccurrenceDraft,
+  setPendingFiles,
+  getPendingFiles,
 } from "@/controllers/citizen/occurrence.controller";
 import {
   occurrenceSchema,
   type OccurrenceSchema,
 } from "@/schemas/occurrence.schema";
 import type { OccurrenceFormData } from "@/types/occurrence";
+import { compressImage } from "@/utils/image-compression";
+import type { CompressionProgress } from "@/utils/image-compression";
+
+const MAX_MEDIA_COUNT = 3;
 
 function subscribeToDraft() {
   return () => {};
@@ -93,10 +102,23 @@ function TerritoryMap({ selected }: { selected: boolean }) {
 
 function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showContact, setShowContact] = useState(
     Boolean(draft?.nome || draft?.email || draft?.telefone),
   );
+
+  // Restore files from in-memory store when returning from review
+  const [mediaFiles, setMediaFiles] = useState<File[]>(() => getPendingFiles());
+  const [mediaNames, setMediaNames] = useState<string[]>(
+    () => draft?.evidencia_nomes ?? getPendingFiles().map((f) => f.name),
+  );
+  const [compressionProgress, setCompressionProgress] =
+    useState<CompressionProgress | null>(null);
+
+  const isCompressing = compressionProgress?.status === "loading" ||
+    compressionProgress?.status === "compressing";
+  const isLimitReached = mediaFiles.length >= MAX_MEDIA_COUNT;
 
   const {
     register,
@@ -114,7 +136,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       nome: draft?.nome ?? "",
       email: draft?.email ?? "",
       telefone: draft?.telefone ?? "",
-      evidencia_nome: draft?.evidencia_nome ?? "",
+      evidencia_nomes: draft?.evidencia_nomes ?? [],
     },
   });
 
@@ -124,22 +146,80 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       name: "endereco",
     })?.trim() ?? "";
 
-  const evidenceName =
-    useWatch({
-      control,
-      name: "evidencia_nome",
-    }) ?? "";
-
   const hasLocation = endereco.length > 0;
 
-  function handleEvidence(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  const handleEvidence = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = event.target.files;
 
-    if (!file) {
-      return;
-    }
+      if (!selectedFiles || selectedFiles.length === 0) {
+        return;
+      }
 
-    setValue("evidencia_nome", file.name);
+      const filesToProcess = Array.from(selectedFiles);
+      const availableSlots = MAX_MEDIA_COUNT - mediaFiles.length;
+
+      if (filesToProcess.length > availableSlots) {
+        toast.warning(
+          `Limite de ${MAX_MEDIA_COUNT} mídias. Apenas ${availableSlots} vaga(s) restante(s).`,
+        );
+        filesToProcess.splice(availableSlots);
+      }
+
+      if (filesToProcess.length === 0) {
+        return;
+      }
+
+      const newFiles: File[] = [];
+      const newNames: string[] = [];
+
+      for (const file of filesToProcess) {
+        try {
+          const compressed = await compressImage(file, (progress) =>
+            setCompressionProgress(progress),
+          );
+
+          newFiles.push(compressed);
+          newNames.push(compressed.name);
+        } catch {
+          toast.error(`Erro ao comprimir: ${file.name}`);
+        }
+      }
+
+      setCompressionProgress(null);
+
+      if (newFiles.length > 0) {
+        const updatedFiles = [...mediaFiles, ...newFiles];
+        const updatedNames = [...mediaNames, ...newNames];
+
+        setMediaFiles(updatedFiles);
+        setMediaNames(updatedNames);
+        setValue("evidencia_nomes", updatedNames);
+        setPendingFiles(updatedFiles);
+
+        toast.success(
+          newFiles.length === 1
+            ? "Mídia adicionada com sucesso!"
+            : `${newFiles.length} mídias adicionadas com sucesso!`,
+        );
+      }
+
+      // Reset input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [mediaFiles, mediaNames, setValue],
+  );
+
+  function handleRemoveMedia(index: number) {
+    const updatedFiles = mediaFiles.filter((_, i) => i !== index);
+    const updatedNames = mediaNames.filter((_, i) => i !== index);
+
+    setMediaFiles(updatedFiles);
+    setMediaNames(updatedNames);
+    setValue("evidencia_nomes", updatedNames);
+    setPendingFiles(updatedFiles);
   }
 
   function handlePrimaryAction() {
@@ -149,11 +229,15 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   }
 
   function onSubmit(data: OccurrenceSchema) {
+    // Save files to in-memory store before navigating
+    setPendingFiles(mediaFiles);
+
     saveOccurrenceDraft({
       ...data,
       nome: showContact ? data.nome : undefined,
       email: showContact ? data.email : undefined,
       telefone: showContact ? data.telefone : undefined,
+      evidencia_nomes: mediaNames.length > 0 ? mediaNames : undefined,
     });
 
     router.push("/nova-ocorrencia/revisar");
@@ -228,14 +312,44 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
           <section className="mt-[14px]">
             <h2 className="text-[20px] font-bold">Evidências</h2>
 
-            <label className="mt-[14px] flex h-[128px] cursor-pointer flex-col items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white">
-              {evidenceName ? (
+            {/* Upload area */}
+            <label
+              className={`mt-[14px] flex h-[128px] flex-col items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white ${
+                isLimitReached || isCompressing
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer"
+              }`}
+            >
+              {isCompressing ? (
+                <>
+                  <Loader2
+                    size={20}
+                    className="animate-spin text-[#C94F32]"
+                  />
+
+                  <span className="mt-[6px] text-[14px] font-semibold text-[#C94F32]">
+                    Comprimindo imagem...
+                  </span>
+
+                  <span className="mt-[6px] text-[12px] text-[#716B67]">
+                    {compressionProgress?.fileName}
+                  </span>
+                </>
+              ) : mediaFiles.length > 0 ? (
                 <>
                   <CircleCheck size={20} className="text-[#236B4D]" />
 
                   <span className="mt-[6px] text-[14px] font-semibold text-[#236B4D]">
-                    Mídia adicionada
+                    {isLimitReached
+                      ? "Limite de 3 mídias atingido"
+                      : "Mídia adicionada"}
                   </span>
+
+                  {!isLimitReached && (
+                    <span className="mt-[6px] text-[12px] text-[#716B67]">
+                      Toque para adicionar mais ({MAX_MEDIA_COUNT - mediaFiles.length} restante{MAX_MEDIA_COUNT - mediaFiles.length !== 1 ? "s" : ""})
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
@@ -252,26 +366,47 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               )}
 
               <input
+                ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*"
+                capture="environment"
+                multiple
+                disabled={isLimitReached || isCompressing}
                 onChange={handleEvidence}
                 className="hidden"
               />
             </label>
 
-            {evidenceName && (
-              <div className="mt-[14px] flex h-[82px] w-[318px] items-start gap-3">
-                <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
-                  <ImageIcon size={20} />
-                </div>
+            {/* Media file list */}
+            {mediaNames.length > 0 && (
+              <div className="mt-[14px] space-y-[10px]">
+                {mediaNames.map((name, index) => (
+                  <div
+                    key={`${name}-${index}`}
+                    className="flex items-start gap-3"
+                  >
+                    <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                      <ImageIcon size={20} />
+                    </div>
 
-                <div className="pt-1">
-                  <p className="text-[14px] text-[#716B67]">{evidenceName}</p>
+                    <div className="flex flex-1 flex-col pt-1">
+                      <p className="text-[14px] text-[#716B67]">{name}</p>
 
-                  <p className="mt-1 text-[12px] leading-[17px] text-[#716B67]">
-                    Imagem selecionada · 1 arquivo
-                  </p>
-                </div>
+                      <p className="mt-1 text-[12px] leading-[17px] text-[#716B67]">
+                        Imagem selecionada · {index + 1} de {mediaNames.length}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMedia(index)}
+                      aria-label={`Remover ${name}`}
+                      className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[#716B67] transition hover:bg-[#F4EFE6] hover:text-[#C94F32]"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </section>
@@ -419,7 +554,8 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
           <button
             type={hasLocation ? "submit" : "button"}
             onClick={handlePrimaryAction}
-            className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] text-[14px] font-bold text-white transition hover:bg-[#B9472E] active:scale-[0.99]"
+            disabled={isCompressing}
+            className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] text-[14px] font-bold text-white transition hover:bg-[#B9472E] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {hasLocation ? "Revisar ocorrência" : "Selecionar localização"}
           </button>
