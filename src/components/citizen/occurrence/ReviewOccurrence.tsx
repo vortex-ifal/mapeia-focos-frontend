@@ -218,8 +218,7 @@ export function ReviewOccurrence() {
                       <p className="text-[14px] text-[#716B67]">{name}</p>
 
                       <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
-                        Imagem selecionada · {mediaNames.length}{" "}
-                        arquivo{mediaNames.length !== 1 ? "s" : ""}
+                        Imagem selecionada · {index + 1} de {mediaNames.length}
                       </p>
                     </div>
                   </div>
