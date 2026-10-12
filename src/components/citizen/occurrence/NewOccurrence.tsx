@@ -12,7 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ChangeEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "react-toastify";
@@ -108,10 +108,10 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     Boolean(draft?.nome || draft?.email || draft?.telefone),
   );
 
-  // Restore files from in-memory store when returning from review
+  // Use in-memory store as single source of truth for media files
   const [mediaFiles, setMediaFiles] = useState<File[]>(() => getPendingFiles());
-  const [mediaNames, setMediaNames] = useState<string[]>(
-    () => draft?.evidencia_nomes ?? getPendingFiles().map((f) => f.name),
+  const [mediaNames, setMediaNames] = useState<string[]>(() =>
+    getPendingFiles().map((f) => f.name),
   );
   const [compressionProgress, setCompressionProgress] =
     useState<CompressionProgress | null>(null);
@@ -136,9 +136,21 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       nome: draft?.nome ?? "",
       email: draft?.email ?? "",
       telefone: draft?.telefone ?? "",
-      evidencia_nomes: draft?.evidencia_nomes ?? [],
+      evidencia_nomes: getPendingFiles().map((f) => f.name),
     },
   });
+
+  useEffect(() => {
+    if (
+      draft?.evidencia_nomes &&
+      draft.evidencia_nomes.length > 0 &&
+      getPendingFiles().length === 0
+    ) {
+      toast.info(
+        "A página foi recarregada. Selecione as mídias novamente se desejar anexá-las.",
+      );
+    }
+  }, [draft]);
 
   const endereco =
     useWatch({

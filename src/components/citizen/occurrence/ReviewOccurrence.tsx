@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   getOccurrenceDraftSnapshot,
+  getPendingFiles,
   subscribeToOccurrenceDraft,
   submitOccurrence,
 } from "@/controllers/citizen/occurrence.controller";
@@ -95,8 +96,10 @@ export function ReviewOccurrence() {
 
   const [submitted, setSubmitted] = useState(false);
 
-  const mediaNames = occurrence?.evidencia_nomes ?? [];
+  const pendingFiles = getPendingFiles();
+  const mediaNames = pendingFiles.map((f) => f.name);
   const hasMedia = mediaNames.length > 0;
+  const lostMedia = !hasMedia && Boolean(occurrence?.evidencia_nomes?.length);
 
   useEffect(() => {
     if (!draftSnapshot && !submitted) {
@@ -173,7 +176,23 @@ export function ReviewOccurrence() {
         <section className="mt-[14px]">
           <h2 className="text-[20px] font-bold">Evidências</h2>
 
-          {hasMedia ? (
+          {lostMedia ? (
+            <div className="mt-[14px] rounded-[12px] border border-[#E9E0D4] bg-[#F4EFE6] p-[14px] text-[13px] text-[#716B67]">
+              <p className="font-semibold text-[#171717]">
+                Mídias precisam ser selecionadas novamente
+              </p>
+              <p className="mt-1 leading-[18px]">
+                A página foi recarregada e os arquivos em memória não estão mais disponíveis.
+              </p>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="mt-2 text-[12px] font-bold text-[#C94F32] underline"
+              >
+                Voltar e selecionar fotos
+              </button>
+            </div>
+          ) : hasMedia ? (
             <>
               {/* Success confirmation card - matching prototype */}
               <div className="mt-[14px] flex h-[56px] items-center justify-center gap-2 rounded-[12px] border border-[#E9E0D4] bg-white">
