@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   getOccurrenceDraftSnapshot,
   getPendingFiles,
+  hasPendingMediaUpload,
+  discardPendingMediaAndFinish,
   subscribeToOccurrenceDraft,
   submitOccurrence,
 } from "@/controllers/citizen/occurrence.controller";
@@ -119,6 +121,10 @@ export function ReviewOccurrence() {
     }
   }, [draftSnapshot, submitted, router]);
 
+  const [hasPendingMedia, setHasPendingMedia] = useState(() =>
+    hasPendingMediaUpload(),
+  );
+
   async function handleSend() {
     if (!occurrence) {
       return;
@@ -127,13 +133,25 @@ export function ReviewOccurrence() {
     try {
       setIsSubmitting(true);
       await submitOccurrence(occurrence);
+      if (hasPendingMediaUpload()) {
+        setHasPendingMedia(true);
+        return;
+      }
       setSubmitted(true);
       router.push("/");
     } catch {
-      // Erro já notificado via toast no submitOccurrence
+      if (hasPendingMediaUpload()) {
+        setHasPendingMedia(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleDiscardAndFinish() {
+    discardPendingMediaAndFinish();
+    setSubmitted(true);
+    router.push("/");
   }
 
   function handleEdit() {
@@ -292,22 +310,55 @@ export function ReviewOccurrence() {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={isSubmitting}
-          className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? "Enviando..." : "Enviar ocorrência"}
-        </button>
+        {hasPendingMedia ? (
+          <>
+            <div className="mt-[14px] rounded-[12px] border border-[#C94F32]/30 bg-[#FBF2EF] p-[14px] text-[13px] text-[#716B67]">
+              <p className="font-semibold text-[#C94F32]">
+                Ocorrência registrada, fotos pendentes
+              </p>
+              <p className="mt-1 leading-[18px]">
+                Sua ocorrência já foi salva no sistema, mas houve um problema ao enviar as fotos. Você pode tentar reenviá-las agora ou concluir sem as fotos.
+              </p>
+            </div>
 
-        <button
-          type="button"
-          onClick={handleEdit}
-          className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#171717]"
-        >
-          Voltar e editar
-        </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Reenviando fotos..." : "Tentar reenviar fotos"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDiscardAndFinish}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#716B67] transition hover:bg-[#F4EFE6]"
+            >
+              Concluir sem fotos
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Enviando..." : "Enviar ocorrência"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#171717]"
+            >
+              Voltar e editar
+            </button>
+          </>
+        )}
       </div>
     </main>
   );

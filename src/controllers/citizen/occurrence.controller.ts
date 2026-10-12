@@ -11,6 +11,7 @@ const DRAFT_KEY = "mapeia-occurrence-draft";
 const DRAFT_EVENT = "mapeia-occurrence-draft-change";
 
 let pendingFiles: File[] = [];
+let pendingMediaOccurrence: OccurrenceResponse | null = null;
 
 export function setPendingFiles(files: File[]) {
   pendingFiles = files;
@@ -22,6 +23,24 @@ export function getPendingFiles(): File[] {
 
 export function clearPendingFiles() {
   pendingFiles = [];
+}
+
+export function getPendingMediaOccurrence(): OccurrenceResponse | null {
+  return pendingMediaOccurrence;
+}
+
+export function hasPendingMediaUpload(): boolean {
+  return pendingMediaOccurrence !== null;
+}
+
+export function clearPendingMediaOccurrence() {
+  pendingMediaOccurrence = null;
+}
+
+export function discardPendingMediaAndFinish() {
+  clearPendingFiles();
+  clearOccurrenceDraft();
+  clearPendingMediaOccurrence();
 }
 
 export function saveOccurrenceDraft(data: OccurrenceFormData) {
@@ -89,33 +108,38 @@ export function clearOccurrenceDraft() {
 export async function submitOccurrence(
   data: OccurrenceFormData,
 ): Promise<OccurrenceResponse> {
-  try {
-    const result = await createOccurrence(data);
+  let result: OccurrenceResponse;
 
-    const files = getPendingFiles();
-
-    if (files.length > 0 && result.id) {
-      try {
-        await uploadMedia(result.id, files);
-      } catch {
-        toast.warning(
-          "Ocorrência registrada, mas houve um erro ao enviar as mídias.",
-        );
-        clearPendingFiles();
-        clearOccurrenceDraft();
-        return result;
-      }
+  if (pendingMediaOccurrence) {
+    result = pendingMediaOccurrence;
+  } else {
+    try {
+      result = await createOccurrence(data);
+    } catch (createError) {
+      toast.error("Não foi possível enviar a ocorrência.");
+      throw createError;
     }
-
-    clearPendingFiles();
-    clearOccurrenceDraft();
-
-    toast.success("Ocorrência enviada com sucesso.");
-
-    return result;
-  } catch (error) {
-    toast.error("Não foi possível enviar a ocorrência.");
-
-    throw error;
   }
+
+  const files = getPendingFiles();
+
+  if (files.length > 0 && result.id) {
+    try {
+      await uploadMedia(result.id, files);
+    } catch (mediaError) {
+      pendingMediaOccurrence = result;
+      toast.warning(
+        "Ocorrência registrada, mas houve um erro ao enviar as fotos. Você pode tentar reenviá-las.",
+      );
+      throw mediaError;
+    }
+  }
+
+  clearPendingFiles();
+  clearOccurrenceDraft();
+  pendingMediaOccurrence = null;
+
+  toast.success("Ocorrência enviada com sucesso.");
+
+  return result;
 }
