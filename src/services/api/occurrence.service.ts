@@ -4,6 +4,8 @@ import type {
   OccurrenceBackendPayload,
 } from "@/types/occurrence";
 
+import { buildApiUrl } from "./api.config";
+
 export async function createOccurrence(
   data: OccurrenceFormData,
 ): Promise<OccurrenceResponse> {
@@ -19,11 +21,7 @@ export async function createOccurrence(
     contact: contactParts.length > 0 ? contactParts.join(" | ") : undefined,
   };
 
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_URL || ""
-  ).replace(/\/+$/, "");
-
-  const endpoint = apiBaseUrl ? `${apiBaseUrl}/api/occurrences` : "/api/occurrences";
+  const endpoint = buildApiUrl("occurrences");
 
   const response = await fetch(endpoint, {
     method: "POST",

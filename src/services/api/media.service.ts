@@ -1,3 +1,5 @@
+import { buildApiUrl } from "./api.config";
+
 export type UploadMediaResponse = {
   id: string;
   storageKey: string;
@@ -10,13 +12,7 @@ export async function uploadMedia(
   occurrenceId: string,
   files: File[],
 ): Promise<UploadMediaResponse[]> {
-  const apiBaseUrl = (
-    process.env.NEXT_PUBLIC_API_URL || ""
-  ).replace(/\/+$/, "");
-
-  const endpoint = apiBaseUrl
-    ? `${apiBaseUrl}/api/occurrences/${occurrenceId}/media`
-    : `/api/occurrences/${occurrenceId}/media`;
+  const endpoint = buildApiUrl(`occurrences/${occurrenceId}/media`);
 
   const formData = new FormData();
 
