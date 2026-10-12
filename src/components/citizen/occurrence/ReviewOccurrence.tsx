@@ -101,6 +101,18 @@ export function ReviewOccurrence() {
   const hasMedia = mediaNames.length > 0;
   const lostMedia = !hasMedia && Boolean(occurrence?.evidencia_nomes?.length);
 
+  const [previewUrls] = useState<string[]>(() => {
+    return typeof window !== "undefined"
+      ? getPendingFiles().map((file) => URL.createObjectURL(file))
+      : [];
+  });
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
   useEffect(() => {
     if (!draftSnapshot && !submitted) {
       router.replace("/nova-ocorrencia");
@@ -210,8 +222,17 @@ export function ReviewOccurrence() {
                     key={`${name}-${index}`}
                     className="flex items-start gap-3"
                   >
-                    <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
-                      <ImageIcon size={20} />
+                    <div className="relative flex h-[82px] w-[104px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                      {previewUrls[index] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewUrls[index]}
+                          alt={name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon size={20} />
+                      )}
                     </div>
 
                     <div className="pt-1">

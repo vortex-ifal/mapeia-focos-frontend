@@ -160,16 +160,31 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   const hasLocation = endereco.length > 0;
 
-  const handleEvidence = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = event.target.files;
+  const previewUrls = useMemo(() => {
+    return mediaFiles.map((file) => URL.createObjectURL(file));
+  }, [mediaFiles]);
 
-      if (!selectedFiles || selectedFiles.length === 0) {
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const processFiles = useCallback(
+    async (incomingFiles: FileList | File[]) => {
+      if (!incomingFiles || incomingFiles.length === 0) {
         return;
       }
 
-      const filesToProcess = Array.from(selectedFiles);
+      const filesToProcess = Array.from(incomingFiles);
       const availableSlots = MAX_MEDIA_COUNT - mediaFiles.length;
+
+      if (availableSlots <= 0) {
+        toast.warning(`Limite de ${MAX_MEDIA_COUNT} mídias atingido.`);
+        return;
+      }
 
       if (filesToProcess.length > availableSlots) {
         toast.warning(
@@ -216,12 +231,51 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
         );
       }
 
-      // Reset input so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     },
     [mediaFiles, mediaNames, setValue],
+  );
+
+  const handleEvidence = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      if (event.target.files) {
+        void processFiles(event.target.files);
+      }
+    },
+    [processFiles],
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      if (!isLimitReached && !isCompressing) {
+        setIsDragging(true);
+      }
+    },
+    [isLimitReached, isCompressing],
+  );
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      setIsDragging(false);
+
+      if (isLimitReached || isCompressing) {
+        return;
+      }
+
+      if (event.dataTransfer?.files) {
+        void processFiles(event.dataTransfer.files);
+      }
+    },
+    [isLimitReached, isCompressing, processFiles],
   );
 
   function handleRemoveMedia(index: number) {
@@ -326,7 +380,15 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
             {/* Upload area */}
             <label
-              className={`mt-[14px] flex h-[128px] flex-col items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white ${
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`mt-[14px] flex h-[128px] flex-col items-center justify-center rounded-[12px] border transition-colors ${
+                isDragging
+                  ? "border-[#C94F32] bg-[#F4EFE6]"
+                  : "border-[#E9E0D4] bg-white"
+              } ${
                 isLimitReached || isCompressing
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer"
@@ -397,8 +459,17 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                     key={`${name}-${index}`}
                     className="flex items-start gap-3"
                   >
-                    <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
-                      <ImageIcon size={20} />
+                    <div className="relative flex h-[82px] w-[104px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                      {previewUrls[index] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewUrls[index]}
+                          alt={name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon size={20} />
+                      )}
                     </div>
 
                     <div className="flex flex-1 flex-col pt-1">
