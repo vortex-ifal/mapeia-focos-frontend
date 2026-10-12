@@ -8,7 +8,6 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   getOccurrenceDraftSnapshot,
-  getPendingFiles,
   subscribeToOccurrenceDraft,
   submitOccurrence,
 } from "@/controllers/citizen/occurrence.controller";
@@ -96,8 +95,6 @@ export function ReviewOccurrence() {
 
   const [submitted, setSubmitted] = useState(false);
 
-  // Check if there are pending files in the in-memory store
-  const pendingFileCount = getPendingFiles().length;
   const mediaNames = occurrence?.evidencia_nomes ?? [];
   const hasMedia = mediaNames.length > 0;
 
