@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, ImageIcon, Layers3 } from "lucide-react";
+import { ArrowLeft, ChevronDown, CircleCheck, ImageIcon, Layers3 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
@@ -8,6 +8,9 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   getOccurrenceDraftSnapshot,
+  getPendingFiles,
+  hasPendingMediaUpload,
+  discardPendingMediaAndFinish,
   subscribeToOccurrenceDraft,
   submitOccurrence,
 } from "@/controllers/citizen/occurrence.controller";
@@ -95,11 +98,32 @@ export function ReviewOccurrence() {
 
   const [submitted, setSubmitted] = useState(false);
 
+  const pendingFiles = getPendingFiles();
+  const mediaNames = pendingFiles.map((f) => f.name);
+  const hasMedia = mediaNames.length > 0;
+  const lostMedia = !hasMedia && Boolean(occurrence?.evidencia_nomes?.length);
+
+  const [previewUrls] = useState<string[]>(() => {
+    return typeof window !== "undefined"
+      ? getPendingFiles().map((file) => URL.createObjectURL(file))
+      : [];
+  });
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
   useEffect(() => {
     if (!draftSnapshot && !submitted) {
       router.replace("/nova-ocorrencia");
     }
   }, [draftSnapshot, submitted, router]);
+
+  const [hasPendingMedia, setHasPendingMedia] = useState(() =>
+    hasPendingMediaUpload(),
+  );
 
   async function handleSend() {
     if (!occurrence) {
@@ -109,13 +133,25 @@ export function ReviewOccurrence() {
     try {
       setIsSubmitting(true);
       await submitOccurrence(occurrence);
+      if (hasPendingMediaUpload()) {
+        setHasPendingMedia(true);
+        return;
+      }
       setSubmitted(true);
       router.push("/");
     } catch {
-      // Erro já notificado via toast no submitOccurrence
+      if (hasPendingMediaUpload()) {
+        setHasPendingMedia(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function handleDiscardAndFinish() {
+    discardPendingMediaAndFinish();
+    setSubmitted(true);
+    router.push("/");
   }
 
   function handleEdit() {
@@ -151,38 +187,96 @@ export function ReviewOccurrence() {
           </h1>
         </header>
 
-        <div className="mt-[14px]">
-          <ReviewMap />
-        </div>
+        <section className="mt-[14px]">
+          <h2 className="text-[20px] font-bold">Localização</h2>
 
-        <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-          <p className="text-[14px] font-bold">{occurrence.endereco}</p>
+          <div className="mt-[14px]">
+            <ReviewMap />
+          </div>
 
-          <p className="mt-1 text-[12px] text-[#716B67]">
-            Centro · terreno ao lado da praça
-          </p>
-        </div>
+          <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+            <p className="text-[14px] font-bold">{occurrence.endereco}</p>
+
+            <p className="mt-1 text-[12px] text-[#716B67]">
+              Centro · terreno ao lado da praça
+            </p>
+          </div>
+        </section>
 
         <section className="mt-[14px]">
           <h2 className="text-[20px] font-bold">Evidências</h2>
 
-          <div className="mt-[14px] flex h-[82px] w-[318px] items-start gap-3">
-            <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
-              <ImageIcon size={20} />
-            </div>
-
-            <div>
-              <p className="text-[14px] text-[#716B67]">
-                {occurrence.evidencia_nome || "Nenhuma mídia selecionada"}
+          {lostMedia ? (
+            <div className="mt-[14px] rounded-[12px] border border-[#E9E0D4] bg-[#F4EFE6] p-[14px] text-[13px] text-[#716B67]">
+              <p className="font-semibold text-[#171717]">
+                Mídias precisam ser selecionadas novamente
               </p>
-
-              {occurrence.evidencia_nome && (
-                <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
-                  Imagem selecionada · 1 arquivo
-                </p>
-              )}
+              <p className="mt-1 leading-[18px]">
+                A página foi recarregada e os arquivos em memória não estão mais disponíveis.
+              </p>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="mt-2 text-[12px] font-bold text-[#C94F32] underline"
+              >
+                Voltar e selecionar fotos
+              </button>
             </div>
-          </div>
+          ) : hasMedia ? (
+            <>
+              {/* Success confirmation card - matching prototype */}
+              <div className="mt-[14px] flex h-[56px] items-center justify-center gap-2 rounded-[12px] border border-[#E9E0D4] bg-white">
+                <CircleCheck size={20} className="text-[#236B4D]" />
+
+                <span className="text-[14px] font-semibold text-[#236B4D]">
+                  Mídia adicionada
+                </span>
+              </div>
+
+              {/* File info cards */}
+              <div className="mt-[14px] space-y-[10px]">
+                {mediaNames.map((name, index) => (
+                  <div
+                    key={`${name}-${index}`}
+                    className="flex items-start gap-3"
+                  >
+                    <div className="relative flex h-[82px] w-[104px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                      {previewUrls[index] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewUrls[index]}
+                          alt={name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon size={20} />
+                      )}
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-[14px] text-[#716B67]">{name}</p>
+
+                      <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
+                        Imagem selecionada · {index + 1} de {mediaNames.length}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-[14px] flex h-[82px] items-start gap-3">
+              <div className="flex h-[82px] w-[104px] shrink-0 items-center justify-center rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">
+                <ImageIcon size={20} />
+              </div>
+
+              <div className="pt-1">
+                <p className="text-[14px] text-[#716B67]">
+                  Nenhuma mídia selecionada
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="mt-[14px]">
@@ -216,22 +310,55 @@ export function ReviewOccurrence() {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={isSubmitting}
-          className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? "Enviando..." : "Enviar ocorrência"}
-        </button>
+        {hasPendingMedia ? (
+          <>
+            <div className="mt-[14px] rounded-[12px] border border-[#C94F32]/30 bg-[#FBF2EF] p-[14px] text-[13px] text-[#716B67]">
+              <p className="font-semibold text-[#C94F32]">
+                Ocorrência registrada, fotos pendentes
+              </p>
+              <p className="mt-1 leading-[18px]">
+                Sua ocorrência já foi salva no sistema, mas houve um problema ao enviar as fotos. Você pode tentar reenviá-las agora ou concluir sem as fotos.
+              </p>
+            </div>
 
-        <button
-          type="button"
-          onClick={handleEdit}
-          className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#171717]"
-        >
-          Voltar e editar
-        </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Reenviando fotos..." : "Tentar reenviar fotos"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDiscardAndFinish}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#716B67] transition hover:bg-[#F4EFE6]"
+            >
+              Concluir sem fotos
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isSubmitting}
+              className="mt-[14px] h-[52px] w-full rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? "Enviando..." : "Enviar ocorrência"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="mt-[14px] h-[48px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#171717]"
+            >
+              Voltar e editar
+            </button>
+          </>
+        )}
       </div>
     </main>
   );

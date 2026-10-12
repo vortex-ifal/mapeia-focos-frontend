@@ -12,7 +12,7 @@ export const occurrenceSchema = z.object({
     .or(z.literal(""))
     .optional(),
   telefone: z.string().trim().optional(),
-  evidencia_nome: z.string().optional(),
+  evidencia_nomes: z.array(z.string()).optional(),
 });
 
 export type OccurrenceSchema = z.infer<typeof occurrenceSchema>;
