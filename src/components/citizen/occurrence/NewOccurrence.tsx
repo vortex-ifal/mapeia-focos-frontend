@@ -12,16 +12,23 @@ import {
   Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { ChangeEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "react-toastify";
 
 import {
   getOccurrenceDraftSnapshot,
+  getPendingFiles,
   saveOccurrenceDraft,
   setPendingFiles,
-  getPendingFiles,
 } from "@/controllers/citizen/occurrence.controller";
 import {
   occurrenceSchema,
@@ -48,8 +55,6 @@ function parseDraft(snapshot: string | null): OccurrenceFormData | null {
     return null;
   }
 }
-
-
 
 function TerritoryMap({ selected }: { selected: boolean }) {
   return (
@@ -102,32 +107,38 @@ function TerritoryMap({ selected }: { selected: boolean }) {
 
 function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const router = useRouter();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showContact, setShowContact] = useState(
     Boolean(draft?.nome || draft?.email || draft?.telefone),
   );
 
-  // Use in-memory store as single source of truth for media files
   const [mediaFiles, setMediaFiles] = useState<File[]>(() => getPendingFiles());
+
   const [mediaNames, setMediaNames] = useState<string[]>(() =>
-    getPendingFiles().map((f) => f.name),
+    getPendingFiles().map((file) => file.name),
   );
+
   const [compressionProgress, setCompressionProgress] =
     useState<CompressionProgress | null>(null);
 
-  const isCompressing = compressionProgress?.status === "loading" ||
+  const isCompressing =
+    compressionProgress?.status === "loading" ||
     compressionProgress?.status === "compressing";
+
   const isLimitReached = mediaFiles.length >= MAX_MEDIA_COUNT;
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     control,
     formState: { errors },
   } = useForm<OccurrenceSchema>({
     resolver: zodResolver(occurrenceSchema),
+
     defaultValues: {
       endereco: draft?.endereco ?? "",
       tipo_situacao: draft?.tipo_situacao ?? "",
@@ -135,7 +146,9 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       nome: draft?.nome ?? "",
       email: draft?.email ?? "",
       telefone: draft?.telefone ?? "",
-      evidencia_nomes: getPendingFiles().map((f) => f.name),
+      evidencia_nomes: getPendingFiles().map((file) => file.name),
+      latitude: draft?.latitude,
+      longitude: draft?.longitude,
     },
   });
 
@@ -178,10 +191,12 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       }
 
       const filesToProcess = Array.from(incomingFiles);
+
       const availableSlots = MAX_MEDIA_COUNT - mediaFiles.length;
 
       if (availableSlots <= 0) {
         toast.warning(`Limite de ${MAX_MEDIA_COUNT} mídias atingido.`);
+
         return;
       }
 
@@ -189,6 +204,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
         toast.warning(
           `Limite de ${MAX_MEDIA_COUNT} mídias. Apenas ${availableSlots} vaga(s) restante(s).`,
         );
+
         filesToProcess.splice(availableSlots);
       }
 
@@ -216,11 +232,14 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
       if (newFiles.length > 0) {
         const updatedFiles = [...mediaFiles, ...newFiles];
+
         const updatedNames = [...mediaNames, ...newNames];
 
         setMediaFiles(updatedFiles);
         setMediaNames(updatedNames);
+
         setValue("evidencia_nomes", updatedNames);
+
         setPendingFiles(updatedFiles);
 
         toast.success(
@@ -249,6 +268,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const handleDragOver = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+
       if (!isLimitReached && !isCompressing) {
         setIsDragging(true);
       }
@@ -258,12 +278,14 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   const handleDragLeave = useCallback((event: React.DragEvent) => {
     event.preventDefault();
+
     setIsDragging(false);
   }, []);
 
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+
       setIsDragging(false);
 
       if (isLimitReached || isCompressing) {
@@ -278,37 +300,75 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   );
 
   function handleRemoveMedia(index: number) {
-    const updatedFiles = mediaFiles.filter((_, i) => i !== index);
-    const updatedNames = mediaNames.filter((_, i) => i !== index);
+    const updatedFiles = mediaFiles.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
+
+    const updatedNames = mediaNames.filter(
+      (_, itemIndex) => itemIndex !== index,
+    );
 
     setMediaFiles(updatedFiles);
     setMediaNames(updatedNames);
+
     setValue("evidencia_nomes", updatedNames);
+
     setPendingFiles(updatedFiles);
+  }
+
+  function handleSelectLocation() {
+    const currentValues = getValues();
+
+    setPendingFiles(mediaFiles);
+
+    saveOccurrenceDraft({
+      ...draft,
+      ...currentValues,
+
+      nome: showContact ? currentValues.nome : undefined,
+
+      email: showContact ? currentValues.email : undefined,
+
+      telefone: showContact ? currentValues.telefone : undefined,
+
+      evidencia_nomes: mediaNames.length > 0 ? mediaNames : undefined,
+
+      latitude: draft?.latitude,
+
+      longitude: draft?.longitude,
+
+      localizacao_origem: draft?.localizacao_origem,
+
+      localizacao_contexto: draft?.localizacao_contexto,
+    });
+
+    router.push("/nova-ocorrencia/localizacao");
   }
 
   function handlePrimaryAction() {
     if (!hasLocation) {
-      router.push("/nova-ocorrencia/localizacao");
+      handleSelectLocation();
     }
   }
 
   function onSubmit(data: OccurrenceSchema) {
-    // Save files to in-memory store before navigating
     setPendingFiles(mediaFiles);
 
     saveOccurrenceDraft({
       ...draft,
       ...data,
+
       nome: showContact ? data.nome : undefined,
+
       email: showContact ? data.email : undefined,
+
       telefone: showContact ? data.telefone : undefined,
+
       evidencia_nomes: mediaNames.length > 0 ? mediaNames : undefined,
     });
 
     router.push("/nova-ocorrencia/revisar");
   }
-
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
@@ -325,13 +385,14 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
           <h1 className="ml-[10px] text-[18px] font-bold">Nova ocorrência</h1>
         </header>
+
         <form onSubmit={handleSubmit(onSubmit)}>
           <section className="mt-[14px]">
             <h2 className="text-[20px] font-bold">Localização</h2>
 
             <button
               type="button"
-              onClick={() => router.push("/nova-ocorrencia/localizacao")}
+              onClick={handleSelectLocation}
               aria-label={
                 hasLocation ? "Alterar localização" : "Selecionar localização"
               }
@@ -343,7 +404,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
             {!hasLocation ? (
               <button
                 type="button"
-                onClick={() => router.push("/nova-ocorrencia/localizacao")}
+                onClick={handleSelectLocation}
                 className="mt-[14px] block h-[72px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px] text-left"
               >
                 <span className="block text-[12px] font-semibold text-[#716B67]">
@@ -357,12 +418,14 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
             ) : (
               <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
                 <p className="text-[14px] font-bold">{endereco}</p>
+
                 <p className="mt-1 text-[12px] text-[#716B67]">
                   {draft?.localizacao_contexto ?? "Localização definida"}
                 </p>
+
                 <button
                   type="button"
-                  onClick={() => router.push("/nova-ocorrencia/localizacao")}
+                  onClick={handleSelectLocation}
                   className="mt-2 text-[11px] font-semibold text-[#C94F32]"
                 >
                   Alterar localização
@@ -380,7 +443,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
           <section className="mt-[14px]">
             <h2 className="text-[20px] font-bold">Evidências</h2>
 
-            {/* Upload area */}
             <label
               onDragOver={handleDragOver}
               onDragEnter={handleDragOver}
@@ -452,7 +514,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               />
             </label>
 
-            {/* Media file list */}
             {mediaNames.length > 0 && (
               <div className="mt-[14px] space-y-[10px]">
                 {mediaNames.map((name, index) => (
@@ -587,6 +648,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   <span className="block text-[12px] font-semibold text-[#716B67]">
                     Nome (opcional)
                   </span>
+
                   <input
                     {...register("nome")}
                     type="text"
@@ -598,11 +660,13 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   <span className="block text-[12px] font-semibold text-[#716B67]">
                     E-mail (opcional)
                   </span>
+
                   <input
                     {...register("email")}
                     type="email"
                     className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
                   />
+
                   {errors.email && (
                     <p className="mt-1 text-[11px] text-red-600">
                       {errors.email.message}
@@ -614,6 +678,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   <span className="block text-[12px] font-semibold text-[#716B67]">
                     Telefone (opcional)
                   </span>
+
                   <input
                     {...register("telefone")}
                     type="tel"
