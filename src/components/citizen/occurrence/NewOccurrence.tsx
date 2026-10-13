@@ -54,16 +54,18 @@ function parseDraft(snapshot: string | null): OccurrenceFormData | null {
 function TerritoryMap({ selected }: { selected: boolean }) {
   return (
     <div className="relative h-[250px] w-full overflow-hidden rounded-[18px] border border-[#E9E0D4] bg-[#F4EFE6]">
-      <div className="absolute left-[-40px] top-[35px] h-[11px] w-[470px] rotate-[3deg] bg-white" />
-      <div className="absolute left-[-40px] top-[78px] h-[9px] w-[470px] -rotate-[1deg] bg-white" />
-      <div className="absolute left-[-40px] top-[122px] h-[11px] w-[470px] rotate-[2deg] bg-white" />
-      <div className="absolute left-[-40px] top-[168px] h-[9px] w-[470px] -rotate-[2deg] bg-white" />
-      <div className="absolute left-[-40px] top-[214px] h-[11px] w-[470px] rotate-[1deg] bg-white" />
+      {/* Ruas horizontais */}
+      <div className="absolute left-[-5%] top-[14%] h-[11px] w-[110%] rotate-[3deg] bg-white" />
+      <div className="absolute left-[-5%] top-[31%] h-[9px] w-[110%] -rotate-[1deg] bg-white" />
+      <div className="absolute left-[-5%] top-[49%] h-[11px] w-[110%] rotate-[2deg] bg-white" />
+      <div className="absolute left-[-5%] top-[67%] h-[9px] w-[110%] -rotate-[2deg] bg-white" />
+      <div className="absolute left-[-5%] top-[85%] h-[11px] w-[110%] rotate-[1deg] bg-white" />
 
-      <div className="absolute left-[63px] top-[-30px] h-[330px] w-[10px] -rotate-[3deg] bg-white" />
-      <div className="absolute left-[148px] top-[-30px] h-[330px] w-[10px] rotate-[2deg] bg-white" />
-      <div className="absolute left-[236px] top-[-30px] h-[330px] w-[10px] -rotate-[4deg] bg-white" />
-      <div className="absolute left-[320px] top-[-30px] h-[330px] w-[10px] rotate-[2deg] bg-white" />
+      {/* Ruas verticais */}
+      <div className="absolute left-[14%] top-[-15%] h-[135%] w-[10px] -rotate-[3deg] bg-white" />
+      <div className="absolute left-[38%] top-[-15%] h-[135%] w-[10px] rotate-[2deg] bg-white" />
+      <div className="absolute left-[64%] top-[-15%] h-[135%] w-[10px] -rotate-[4deg] bg-white" />
+      <div className="absolute left-[86%] top-[-15%] h-[135%] w-[10px] rotate-[2deg] bg-white" />
 
       {selected ? (
         <div className="absolute left-[66%] top-[36%] flex h-[52px] w-[52px] items-center justify-center rounded-full border border-[#C94F32]/40 bg-[#FBF8F2]/70">
@@ -98,8 +100,6 @@ function TerritoryMap({ selected }: { selected: boolean }) {
   );
 }
 
-
-
 function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +124,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     register,
     handleSubmit,
     setValue,
-    setFocus,
     control,
     formState: { errors },
   } = useForm<OccurrenceSchema>({
@@ -290,7 +289,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   function handlePrimaryAction() {
     if (!hasLocation) {
-      setFocus("endereco");
+      router.push("/nova-ocorrencia/localizacao");
     }
   }
 
@@ -299,6 +298,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     setPendingFiles(mediaFiles);
 
     saveOccurrenceDraft({
+      ...draft,
       ...data,
       nome: showContact ? data.nome : undefined,
       email: showContact ? data.email : undefined,
@@ -312,7 +312,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
-      <div className="mx-auto w-full max-w-[390px] px-[18px] pb-[22px] pt-[18px]">
+      <div className="mx-auto w-full px-[18px] pb-[22px] pt-[18px] md:max-w-[760px] md:px-8">
         <header className="flex h-[52px] items-center">
           <button
             type="button"
@@ -325,42 +325,44 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
           <h1 className="ml-[10px] text-[18px] font-bold">Nova ocorrência</h1>
         </header>
-
         <form onSubmit={handleSubmit(onSubmit)}>
           <section className="mt-[14px]">
             <h2 className="text-[20px] font-bold">Localização</h2>
 
-            <div className="mt-[14px]">
+            <button
+              type="button"
+              onClick={() => router.push("/nova-ocorrencia/localizacao")}
+              aria-label={
+                hasLocation ? "Alterar localização" : "Selecionar localização"
+              }
+              className="mt-[14px] block w-full text-left"
+            >
               <TerritoryMap selected={hasLocation} />
-            </div>
+            </button>
 
             {!hasLocation ? (
-              <label className="mt-[14px] block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+              <button
+                type="button"
+                onClick={() => router.push("/nova-ocorrencia/localizacao")}
+                className="mt-[14px] block h-[72px] w-full rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px] text-left"
+              >
                 <span className="block text-[12px] font-semibold text-[#716B67]">
                   Endereço ou referência
                 </span>
 
-                <input
-                  {...register("endereco")}
-                  placeholder="Informe onde você observou a ocorrência."
-                  className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none placeholder:text-[#666666]"
-                />
-              </label>
+                <span className="mt-[6px] block text-[14px] text-[#666666]">
+                  Informe onde você observou a ocorrência.
+                </span>
+              </button>
             ) : (
-              <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+              <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
                 <p className="text-[14px] font-bold">{endereco}</p>
-
                 <p className="mt-1 text-[12px] text-[#716B67]">
-                  Centro · terreno ao lado da praça
+                  {draft?.localizacao_contexto ?? "Localização definida"}
                 </p>
-
                 <button
                   type="button"
-                  onClick={() => {
-                    setValue("endereco", "");
-
-                    setTimeout(() => setFocus("endereco"), 0);
-                  }}
+                  onClick={() => router.push("/nova-ocorrencia/localizacao")}
                   className="mt-2 text-[11px] font-semibold text-[#C94F32]"
                 >
                   Alterar localização
@@ -396,10 +398,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
             >
               {isCompressing ? (
                 <>
-                  <Loader2
-                    size={20}
-                    className="animate-spin text-[#C94F32]"
-                  />
+                  <Loader2 size={20} className="animate-spin text-[#C94F32]" />
 
                   <span className="mt-[6px] text-[14px] font-semibold text-[#C94F32]">
                     Comprimindo imagem...
@@ -421,7 +420,9 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
                   {!isLimitReached && (
                     <span className="mt-[6px] text-[12px] text-[#716B67]">
-                      Toque para adicionar mais ({MAX_MEDIA_COUNT - mediaFiles.length} restante{MAX_MEDIA_COUNT - mediaFiles.length !== 1 ? "s" : ""})
+                      Toque para adicionar mais (
+                      {MAX_MEDIA_COUNT - mediaFiles.length} restante
+                      {MAX_MEDIA_COUNT - mediaFiles.length !== 1 ? "s" : ""})
                     </span>
                   )}
                 </>

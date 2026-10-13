@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -17,8 +16,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         autoClose={2000}
         hideProgressBar
       />
-
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

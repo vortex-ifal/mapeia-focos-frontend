@@ -14,11 +14,12 @@ export function CitizenHome() {
           flex
           min-h-dvh
           w-full
-          max-w-[430px]
           flex-col
-          px-5
-          pb-7
+          px-[18px]
+          pb-[22px]
           pt-[18px]
+          md:max-w-[760px]
+          md:px-8
           max-[360px]:px-4
         "
       >
@@ -28,6 +29,7 @@ export function CitizenHome() {
             alt="Mapeia Focos"
             width={128}
             height={30}
+            className="h-auto w-[128px]"
             priority
           />
         </header>
@@ -42,11 +44,9 @@ export function CitizenHome() {
               max-[360px]:text-[27px]
             "
           >
-            Ajude a transformar
+            Ajude a transformar uma observação
             <br />
-            uma observação em
-            <br />
-            ação no território.
+            em ação no território.
           </h1>
 
           <p
