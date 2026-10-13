@@ -1,9 +1,13 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, CircleCheck, ImageIcon, Layers3 } from "lucide-react";
-
+import {
+  ArrowLeft,
+  ChevronDown,
+  CircleCheck,
+  ImageIcon,
+  Layers3,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
@@ -19,35 +23,37 @@ import type { OccurrenceFormData } from "@/types/occurrence";
 
 const situationLabels: Record<string, string> = {
   recipientes_agua_parada: "Recipientes com água parada",
-
   agua_acumulada_terreno: "Água acumulada em terreno",
-
   reservatorio_destampado: "Reservatório destampado",
 };
 
 function ReviewMap() {
   return (
     <div className="relative h-[190px] w-full overflow-hidden rounded-[18px] border border-[#E9E0D4] bg-[#F4EFE6]">
-      <div className="absolute left-[-40px] top-[28px] h-[11px] w-[470px] rotate-[3deg] bg-white" />
+      {/* Ruas horizontais */}
+      <div className="absolute left-[-5%] top-[15%] h-[11px] w-[110%] rotate-[3deg] bg-white" />
 
-      <div className="absolute left-[-40px] top-[67px] h-[9px] w-[470px] -rotate-[1deg] bg-white" />
+      <div className="absolute left-[-5%] top-[35%] h-[9px] w-[110%] -rotate-[1deg] bg-white" />
 
-      <div className="absolute left-[-40px] top-[108px] h-[11px] w-[470px] rotate-[2deg] bg-white" />
+      <div className="absolute left-[-5%] top-[57%] h-[11px] w-[110%] rotate-[2deg] bg-white" />
 
-      <div className="absolute left-[-40px] top-[148px] h-[9px] w-[470px] -rotate-[2deg] bg-white" />
+      <div className="absolute left-[-5%] top-[78%] h-[9px] w-[110%] -rotate-[2deg] bg-white" />
 
-      <div className="absolute left-[63px] top-[-30px] h-[270px] w-[10px] -rotate-[3deg] bg-white" />
+      {/* Ruas verticais */}
+      <div className="absolute left-[18%] top-[-16%] h-[142%] w-[10px] -rotate-[3deg] bg-white" />
 
-      <div className="absolute left-[148px] top-[-30px] h-[270px] w-[10px] rotate-[2deg] bg-white" />
+      <div className="absolute left-[42%] top-[-16%] h-[142%] w-[10px] rotate-[2deg] bg-white" />
 
-      <div className="absolute left-[236px] top-[-30px] h-[270px] w-[10px] -rotate-[4deg] bg-white" />
+      <div className="absolute left-[67%] top-[-16%] h-[142%] w-[10px] -rotate-[4deg] bg-white" />
 
-      <div className="absolute left-[320px] top-[-30px] h-[270px] w-[10px] rotate-[2deg] bg-white" />
+      <div className="absolute left-[90%] top-[-16%] h-[142%] w-[10px] rotate-[2deg] bg-white" />
 
-      <div className="absolute left-[66%] top-[42%] flex h-[52px] w-[52px] items-center justify-center rounded-full border border-[#C94F32]/40 bg-[#FBF8F2]/70">
+      {/* Localização selecionada */}
+      <div className="absolute left-[66%] top-[42%] flex h-[52px] w-[52px] -translate-x-1/2 items-center justify-center rounded-full border border-[#C94F32]/40 bg-[#FBF8F2]/70">
         <span className="h-[14px] w-[14px] rounded-full border-[3px] border-white bg-[#C94F32] shadow-sm" />
       </div>
 
+      {/* Legenda */}
       <div className="absolute bottom-3 left-3 right-3 flex h-[44px] items-center justify-between rounded-[12px] border border-[#E9E0D4] bg-white px-3 text-[10px]">
         <div className="flex items-center gap-3 text-[#716B67]">
           <span className="flex items-center gap-1">
@@ -99,8 +105,11 @@ export function ReviewOccurrence() {
   const [submitted, setSubmitted] = useState(false);
 
   const pendingFiles = getPendingFiles();
-  const mediaNames = pendingFiles.map((f) => f.name);
+
+  const mediaNames = pendingFiles.map((file) => file.name);
+
   const hasMedia = mediaNames.length > 0;
+
   const lostMedia = !hasMedia && Boolean(occurrence?.evidencia_nomes?.length);
 
   const [previewUrls] = useState<string[]>(() => {
@@ -132,12 +141,16 @@ export function ReviewOccurrence() {
 
     try {
       setIsSubmitting(true);
+
       await submitOccurrence(occurrence);
+
       if (hasPendingMediaUpload()) {
         setHasPendingMedia(true);
         return;
       }
+
       setSubmitted(true);
+
       router.push("/");
     } catch {
       if (hasPendingMediaUpload()) {
@@ -150,7 +163,9 @@ export function ReviewOccurrence() {
 
   function handleDiscardAndFinish() {
     discardPendingMediaAndFinish();
+
     setSubmitted(true);
+
     router.push("/");
   }
 
@@ -164,14 +179,13 @@ export function ReviewOccurrence() {
 
   const hasContact = Boolean(
     occurrence.nome?.trim() ||
-      occurrence.email?.trim() ||
-      occurrence.telefone?.trim(),
+    occurrence.email?.trim() ||
+    occurrence.telefone?.trim(),
   );
-
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
-      <div className="mx-auto w-full max-w-[390px] px-[18px] pb-[22px] pt-[18px]">
+      <div className="mx-auto w-full px-[18px] pb-[22px] pt-[18px] md:max-w-[760px] md:px-8">
         <header className="flex h-[52px] items-center">
           <button
             type="button"
@@ -194,11 +208,11 @@ export function ReviewOccurrence() {
             <ReviewMap />
           </div>
 
-          <div className="mt-[14px] h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
+          <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
             <p className="text-[14px] font-bold">{occurrence.endereco}</p>
 
             <p className="mt-1 text-[12px] text-[#716B67]">
-              Centro · terreno ao lado da praça
+              {occurrence.localizacao_contexto ?? "Localização definida"}
             </p>
           </div>
         </section>
@@ -211,9 +225,12 @@ export function ReviewOccurrence() {
               <p className="font-semibold text-[#171717]">
                 Mídias precisam ser selecionadas novamente
               </p>
+
               <p className="mt-1 leading-[18px]">
-                A página foi recarregada e os arquivos em memória não estão mais disponíveis.
+                A página foi recarregada e os arquivos em memória não estão mais
+                disponíveis.
               </p>
+
               <button
                 type="button"
                 onClick={handleEdit}
@@ -224,7 +241,6 @@ export function ReviewOccurrence() {
             </div>
           ) : hasMedia ? (
             <>
-              {/* Success confirmation card - matching prototype */}
               <div className="mt-[14px] flex h-[56px] items-center justify-center gap-2 rounded-[12px] border border-[#E9E0D4] bg-white">
                 <CircleCheck size={20} className="text-[#236B4D]" />
 
@@ -233,7 +249,6 @@ export function ReviewOccurrence() {
                 </span>
               </div>
 
-              {/* File info cards */}
               <div className="mt-[14px] space-y-[10px]">
                 {mediaNames.map((name, index) => (
                   <div
@@ -253,8 +268,10 @@ export function ReviewOccurrence() {
                       )}
                     </div>
 
-                    <div className="pt-1">
-                      <p className="text-[14px] text-[#716B67]">{name}</p>
+                    <div className="min-w-0 pt-1">
+                      <p className="break-words text-[14px] text-[#716B67]">
+                        {name}
+                      </p>
 
                       <p className="mt-1 text-[13px] leading-[18px] text-[#716B67]">
                         Imagem selecionada · {index + 1} de {mediaNames.length}
@@ -282,7 +299,7 @@ export function ReviewOccurrence() {
         <section className="mt-[14px]">
           <h2 className="text-[20px] font-bold">Situação observada</h2>
 
-          <div className="mt-[14px] h-[150px] w-[224px] rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
+          <div className="mt-[14px] min-h-[150px] w-[224px] max-w-full rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
             <p className="text-[14px] font-bold leading-[18px]">
               {situationLabels[occurrence.tipo_situacao] ??
                 occurrence.tipo_situacao}
@@ -294,7 +311,7 @@ export function ReviewOccurrence() {
           </div>
         </section>
 
-        <div className="mt-[14px] flex h-[48px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-white px-[10px]">
+        <div className="mt-[14px] flex min-h-[48px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-white px-[10px] py-2">
           <span
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
               hasContact ? "border-[#C94F32]" : "border-[#E9E0D4] bg-[#F4EFE6]"
@@ -316,8 +333,11 @@ export function ReviewOccurrence() {
               <p className="font-semibold text-[#C94F32]">
                 Ocorrência registrada, fotos pendentes
               </p>
+
               <p className="mt-1 leading-[18px]">
-                Sua ocorrência já foi salva no sistema, mas houve um problema ao enviar as fotos. Você pode tentar reenviá-las agora ou concluir sem as fotos.
+                Sua ocorrência já foi salva no sistema, mas houve um problema ao
+                enviar as fotos. Você pode tentar reenviá-las agora ou concluir
+                sem as fotos.
               </p>
             </div>
 

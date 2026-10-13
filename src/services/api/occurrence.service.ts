@@ -19,6 +19,8 @@ export async function createOccurrence(
     description: data.descricao,
     situation_type: data.tipo_situacao || undefined,
     contact: contactParts.length > 0 ? contactParts.join(" | ") : undefined,
+    latitude: data.latitude,
+    longitude: data.longitude,
   };
 
   const endpoint = buildApiUrl("occurrences");
