@@ -29,6 +29,7 @@ export function CitizenHome() {
             alt="Mapeia Focos"
             width={128}
             height={30}
+            className="h-auto w-[128px]"
             priority
           />
         </header>
