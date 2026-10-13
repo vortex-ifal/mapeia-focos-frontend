@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ChevronDown, Layers3, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import {
@@ -10,6 +10,7 @@ import {
   requestCurrentCoordinates,
   saveSelectedLocation,
 } from "@/controllers/citizen/location.controller";
+import { getOccurrenceDraft } from "@/controllers/citizen/occurrence.controller";
 import { reverseGeocode } from "@/services/api/location.service";
 
 type ScreenMode = "request" | "manual" | "denied";
@@ -35,7 +36,7 @@ function TerritoryMap() {
         <span className="h-[14px] w-[14px] rounded-full border-[3px] border-white bg-[#C94F32] shadow-sm" />
       </div>
 
-      {/* Legenda do mapa */}
+      {/* Legenda */}
       <div className="absolute bottom-3 left-3 right-3 flex h-[44px] items-center justify-between rounded-[12px] border border-[#E9E0D4] bg-white px-[10px] text-[11px]">
         <div className="flex items-center gap-2 text-[#716B67]">
           <span className="flex items-center gap-1">
@@ -64,19 +65,55 @@ function TerritoryMap() {
 export function RequestLocation() {
   const router = useRouter();
 
+  const requestVersionRef = useRef(0);
+
   const [mode, setMode] = useState<ScreenMode>("request");
-  const [manualAddress, setManualAddress] = useState("");
+
+  const [manualAddress, setManualAddress] = useState(
+    () => getOccurrenceDraft()?.endereco ?? "",
+  );
+
   const [isLocating, setIsLocating] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      requestVersionRef.current += 1;
+    };
+  }, []);
+
+  function invalidateGpsRequest() {
+    requestVersionRef.current += 1;
+
+    setIsLocating(false);
+  }
+
+  function handleBack() {
+    invalidateGpsRequest();
+
+    router.back();
+  }
+
+  function handleOpenManual() {
+    invalidateGpsRequest();
+
+    setMode("manual");
+  }
 
   async function handleCurrentLocation() {
     if (isLocating) {
       return;
     }
 
+    const requestVersion = ++requestVersionRef.current;
+
     setIsLocating(true);
 
     try {
       const coordinates = await requestCurrentCoordinates();
+
+      if (requestVersionRef.current !== requestVersion) {
+        return;
+      }
 
       let address = `${coordinates.latitude.toFixed(
         6,
@@ -90,12 +127,25 @@ export function RequestLocation() {
           coordinates.longitude,
         );
 
+        if (requestVersionRef.current !== requestVersion) {
+          return;
+        }
+
         address = resolved.address;
+
         context = resolved.context;
       } catch {
+        if (requestVersionRef.current !== requestVersion) {
+          return;
+        }
+
         toast.info(
           "Localização obtida, mas não foi possível identificar o endereço automaticamente.",
         );
+      }
+
+      if (requestVersionRef.current !== requestVersion) {
+        return;
       }
 
       saveSelectedLocation({
@@ -107,13 +157,39 @@ export function RequestLocation() {
 
       router.push("/nova-ocorrencia");
     } catch (error) {
-      setMode("denied");
-
-      if (error instanceof LocationRequestError && error.reason !== "denied") {
-        toast.warning(error.message);
+      if (requestVersionRef.current !== requestVersion) {
+        return;
       }
+
+      if (error instanceof LocationRequestError) {
+        if (error.reason === "denied") {
+          setMode("denied");
+
+          return;
+        }
+
+        if (error.reason === "unsupported") {
+          setMode("manual");
+
+          toast.warning(error.message);
+
+          return;
+        }
+
+        setMode("request");
+
+        toast.warning(error.message);
+
+        return;
+      }
+
+      setMode("request");
+
+      toast.warning("Não foi possível obter sua localização. Tente novamente.");
     } finally {
-      setIsLocating(false);
+      if (requestVersionRef.current === requestVersion) {
+        setIsLocating(false);
+      }
     }
   }
 
@@ -122,8 +198,11 @@ export function RequestLocation() {
 
     if (address.length < 3) {
       toast.warning("Informe um endereço ou referência.");
+
       return;
     }
+
+    invalidateGpsRequest();
 
     saveSelectedLocation({
       address,
@@ -142,7 +221,7 @@ export function RequestLocation() {
         <header className="flex h-[52px] items-center">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleBack}
             aria-label="Voltar"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white"
           >
@@ -179,7 +258,13 @@ export function RequestLocation() {
         </div>
 
         {showManualField ? (
-          <>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+
+              handleManualLocation();
+            }}
+          >
             <label className="mt-[14px] block min-h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[12px] py-[10px]">
               <span className="block text-[12px] font-semibold text-[#716B67]">
                 Endereço ou referência
@@ -199,13 +284,12 @@ export function RequestLocation() {
             </label>
 
             <button
-              type="button"
-              onClick={handleManualLocation}
+              type="submit"
               className="mt-[14px] flex h-[52px] w-full items-center justify-center rounded-[12px] bg-[#C94F32] px-4 text-[14px] font-bold text-white transition hover:bg-[#B9472E] active:scale-[0.99]"
             >
               Confirmar localização
             </button>
-          </>
+          </form>
         ) : (
           <>
             <button
@@ -226,7 +310,7 @@ export function RequestLocation() {
 
             <button
               type="button"
-              onClick={() => setMode("manual")}
+              onClick={handleOpenManual}
               className="mt-[14px] flex h-[48px] w-full items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white px-4 text-[14px] font-bold text-[#171717] transition hover:bg-[#F4EFE6] active:scale-[0.99]"
             >
               Informar manualmente
