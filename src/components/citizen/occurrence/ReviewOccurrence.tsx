@@ -7,6 +7,7 @@ import {
   ImageIcon,
   Layers3,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
@@ -15,8 +16,6 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-
-import { handleComingSoon } from "@/controllers/citizen/home.controller";
 
 import {
   discardPendingMediaAndFinish,
@@ -174,13 +173,16 @@ function SuccessOccurrence({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleComingSoon}
-          className="mt-[14px] flex h-[52px] w-full items-center justify-center rounded-[12px] bg-[#C94F32] px-[16px] text-[14px] font-bold text-white transition hover:bg-[#B9472E] active:scale-[0.99]"
+        <Link
+          href={`/acompanhar-referencia${
+            reference && reference !== "Referência indisponível"
+              ? `?referencia=${encodeURIComponent(reference)}`
+              : ""
+          }`}
+          className="mt-[14px] flex h-[52px] w-full items-center justify-center rounded-[12px] bg-[#C94F32] px-[16px] text-center text-[14px] font-bold text-white no-underline transition hover:bg-[#B9472E] active:scale-[0.99]"
         >
           Acompanhar ocorrência
-        </button>
+        </Link>
 
         <button
           type="button"
