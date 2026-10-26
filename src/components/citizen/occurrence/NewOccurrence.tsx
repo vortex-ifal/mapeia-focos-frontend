@@ -29,6 +29,7 @@ import {
   getPendingFiles,
   saveOccurrenceDraft,
   setPendingFiles,
+  subscribeToOccurrenceDraft,
 } from "@/controllers/citizen/occurrence.controller";
 import {
   occurrenceSchema,
@@ -39,10 +40,6 @@ import { compressImage } from "@/utils/image-compression";
 import type { CompressionProgress } from "@/utils/image-compression";
 
 const MAX_MEDIA_COUNT = 3;
-
-function subscribeToDraft() {
-  return () => {};
-}
 
 function parseDraft(snapshot: string | null): OccurrenceFormData | null {
   if (!snapshot) {
@@ -622,7 +619,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
 export function NewOccurrence() {
   const draftSnapshot = useSyncExternalStore(
-    subscribeToDraft,
+    subscribeToOccurrenceDraft,
     getOccurrenceDraftSnapshot,
     () => null,
   );
