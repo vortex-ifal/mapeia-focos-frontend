@@ -342,12 +342,6 @@ export function ReviewOccurrence() {
     return null;
   }
 
-  const hasContact = Boolean(
-    reviewOccurrence.name?.trim() ||
-    reviewOccurrence.email?.trim() ||
-    reviewOccurrence.phone?.trim(),
-  );
-
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
       <div className="mx-auto w-full px-[18px] pb-[22px] pt-[18px] md:max-w-[760px] md:px-8">
@@ -458,22 +452,6 @@ export function ReviewOccurrence() {
             </p>
           </div>
         </section>
-
-        <div className="mt-[14px] flex min-h-[48px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-white px-[10px] py-2">
-          <span
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-              hasContact ? "border-[#C94F32]" : "border-[#E9E0D4] bg-[#F4EFE6]"
-            }`}
-          >
-            {hasContact && (
-              <span className="h-2 w-2 rounded-full bg-[#C94F32]" />
-            )}
-          </span>
-
-          <span className="ml-2 text-[13px] font-medium">
-            Informar dados de contato (opcional)
-          </span>
-        </div>
 
         {submitError && (
           <div className="mt-[14px] flex min-h-[86px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-[#F8E3E0] px-[12px]">

@@ -13,17 +13,6 @@ export const occurrenceSchema = z.object({
     .trim()
     .min(5, "A descrição deve conter no mínimo 5 caracteres."),
 
-  name: z.string().trim().optional(),
-
-  email: z
-    .string()
-    .trim()
-    .email("Informe um e-mail válido.")
-    .or(z.literal(""))
-    .optional(),
-
-  phone: z.string().trim().optional(),
-
   evidenceNames: z.array(z.string()).optional(),
 
   latitude: z.number().optional(),

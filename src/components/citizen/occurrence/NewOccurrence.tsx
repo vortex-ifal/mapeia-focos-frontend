@@ -110,10 +110,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [showContact, setShowContact] = useState(
-    Boolean(draft?.name || draft?.email || draft?.phone),
-  );
-
   const [mediaFiles, setMediaFiles] = useState<File[]>(() => getPendingFiles());
 
   const [mediaNames, setMediaNames] = useState<string[]>(() =>
@@ -143,9 +139,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       address: draft?.address ?? "",
       situationType: draft?.situationType ?? "",
       description: draft?.description ?? "",
-      name: draft?.name ?? "",
-      email: draft?.email ?? "",
-      phone: draft?.phone ?? "",
       evidenceNames: getPendingFiles().map((file) => file.name),
       latitude: draft?.latitude,
       longitude: draft?.longitude,
@@ -325,12 +318,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       ...draft,
       ...currentValues,
 
-      name: showContact ? currentValues.name : undefined,
-
-      email: showContact ? currentValues.email : undefined,
-
-      phone: showContact ? currentValues.phone : undefined,
-
       evidenceNames: mediaNames.length > 0 ? mediaNames : undefined,
 
       latitude: draft?.latitude,
@@ -357,12 +344,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     saveOccurrenceDraft({
       ...draft,
       ...data,
-
-      name: showContact ? data.name : undefined,
-
-      email: showContact ? data.email : undefined,
-
-      phone: showContact ? data.phone : undefined,
 
       evidenceNames: mediaNames.length > 0 ? mediaNames : undefined,
     });
@@ -615,89 +596,6 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                 {errors.description.message}
               </p>
             )}
-          </section>
-
-          <section className="mt-[14px]">
-            <h2 className="text-[20px] font-bold">Privacidade</h2>
-
-            <button
-              type="button"
-              onClick={() => setShowContact((value) => !value)}
-              className="mt-[14px] flex h-[48px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-white px-[10px] text-left"
-            >
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                  showContact
-                    ? "border-[#C94F32]"
-                    : "border-[#E9E0D4] bg-[#F4EFE6]"
-                }`}
-              >
-                {showContact && (
-                  <span className="h-2 w-2 rounded-full bg-[#C94F32]" />
-                )}
-              </span>
-
-              <span className="ml-2 text-[13px] font-medium">
-                Informar dados de contato (opcional)
-              </span>
-            </button>
-
-            {showContact && (
-              <div className="mt-[12px] space-y-[10px]">
-                <label className="block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-                  <span className="block text-[12px] font-semibold text-[#716B67]">
-                    Nome (opcional)
-                  </span>
-
-                  <input
-                    {...register("name")}
-                    type="text"
-                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
-                  />
-                </label>
-
-                <label className="block rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-                  <span className="block text-[12px] font-semibold text-[#716B67]">
-                    E-mail (opcional)
-                  </span>
-
-                  <input
-                    {...register("email")}
-                    type="email"
-                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
-                  />
-
-                  {errors.email && (
-                    <p className="mt-1 text-[11px] text-red-600">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </label>
-
-                <label className="block h-[72px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-                  <span className="block text-[12px] font-semibold text-[#716B67]">
-                    Telefone (opcional)
-                  </span>
-
-                  <input
-                    {...register("phone")}
-                    type="tel"
-                    className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
-                  />
-                </label>
-              </div>
-            )}
-
-            <p className="mt-[12px] text-[11px] leading-[17px] text-[#716B67]">
-              Se desejar receber retorno, informe e-mail ou telefone. Seu nome é
-              opcional e os dados não são públicos.
-            </p>
-
-            <div className="mt-[14px] flex h-[76px] items-center rounded-[12px] border border-[#E9E0D4] bg-[#EEE8ED] px-[13px]">
-              <p className="text-[12px] font-medium leading-[16px] text-[#584A57]">
-                Mídias são privadas e usadas somente no atendimento autorizado.
-              </p>
-            </div>
           </section>
 
           <button

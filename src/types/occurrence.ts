@@ -4,9 +4,6 @@ export type OccurrenceDraft = {
   address: string;
   situationType: string;
   description: string;
-  name?: string;
-  email?: string;
-  phone?: string;
   evidenceNames?: string[];
 
   latitude?: number;
