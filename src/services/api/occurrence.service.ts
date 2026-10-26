@@ -17,7 +17,7 @@ export async function createOccurrence(
   const payload: OccurrenceBackendPayload = {
     address: data.endereco,
     description: data.descricao,
-    situation_type: data.tipo_situacao || undefined,
+    situationType: data.tipo_situacao || undefined,
     contact: contactParts.length > 0 ? contactParts.join(" | ") : undefined,
     latitude: data.latitude,
     longitude: data.longitude,

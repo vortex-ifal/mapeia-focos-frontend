@@ -21,7 +21,7 @@ export type OccurrenceFormData = OccurrenceDraft;
 export type OccurrenceBackendPayload = {
   address: string;
   description: string;
-  situation_type?: string;
+  situationType?: string;
   contact?: string;
   latitude?: number;
   longitude?: number;
