@@ -1,11 +1,24 @@
 import { toast } from "react-toastify";
 
-import { createOccurrence } from "@/services/api/occurrence.service";
+import {
+  createOccurrence,
+  getOccurrenceStatusByProtocol,
+  OccurrenceNotFoundError,
+  OccurrenceValidationError,
+  OccurrenceServerError,
+} from "@/services/api/occurrence.service";
 import { uploadMedia } from "@/services/api/media.service";
 import type {
   OccurrenceFormData,
   OccurrenceResponse,
+  OccurrenceStatusResponse,
 } from "@/types/occurrence";
+
+export {
+  OccurrenceNotFoundError,
+  OccurrenceValidationError,
+  OccurrenceServerError,
+};
 
 const DRAFT_KEY = "mapeia-occurrence-draft";
 const DRAFT_EVENT = "mapeia-occurrence-draft-change";
@@ -141,5 +154,49 @@ export async function submitOccurrence(
 
   toast.success("Ocorrência enviada com sucesso.");
 
+  return result;
+}
+
+const QUERIED_STATUS_KEY = "mapeia-queried-occurrence-status";
+
+export function saveQueriedOccurrenceStatus(data: OccurrenceStatusResponse) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  sessionStorage.setItem(QUERIED_STATUS_KEY, JSON.stringify(data));
+}
+
+export function getQueriedOccurrenceStatus(): OccurrenceStatusResponse | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const stored = sessionStorage.getItem(QUERIED_STATUS_KEY);
+  if (!stored) {
+    return null;
+  }
+  try {
+    return JSON.parse(stored) as OccurrenceStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
+export function clearQueriedOccurrenceStatus() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  sessionStorage.removeItem(QUERIED_STATUS_KEY);
+}
+
+export async function searchOccurrenceByProtocol(
+  protocol: string,
+): Promise<OccurrenceStatusResponse> {
+  const trimmed = protocol.trim();
+  if (!trimmed) {
+    throw new Error("Informe o código de referência.");
+  }
+
+  const result = await getOccurrenceStatusByProtocol(trimmed);
+  saveQueriedOccurrenceStatus(result);
   return result;
 }

@@ -281,8 +281,8 @@ export function ReviewOccurrence() {
       const result = await submitOccurrence(data);
 
       const generatedReference =
-        result.protocol?.trim() ||
-        result.protocolo?.trim() ||
+        result.protocol?.trim().toUpperCase() ||
+        result.protocolo?.trim().toUpperCase() ||
         result.id?.trim() ||
         "Referência indisponível";
 
