@@ -93,9 +93,8 @@ export function CitizenHome() {
             Registrar possível foco
           </Link>
 
-          <button
-            type="button"
-            onClick={handleComingSoon}
+          <Link
+            href="/acompanhar-referencia"
             className="
               flex
               min-h-[53px]
@@ -107,9 +106,11 @@ export function CitizenHome() {
               border-[#E9DED5]
               bg-white
               px-4
+              text-center
               text-[14px]
               font-bold
               text-[#171717]
+              no-underline
               transition
               duration-150
               hover:bg-[#FDFCFA]
@@ -122,7 +123,7 @@ export function CitizenHome() {
             "
           >
             Acompanhar ocorrência
-          </button>
+          </Link>
 
           <button
             type="button"
