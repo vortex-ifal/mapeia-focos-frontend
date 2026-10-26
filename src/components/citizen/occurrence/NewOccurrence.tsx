@@ -451,23 +451,31 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                     {compressionProgress?.fileName}
                   </span>
                 </>
-              ) : mediaFiles.length > 0 ? (
+              ) : isLimitReached ? (
                 <>
                   <CircleCheck size={20} className="text-[#236B4D]" />
 
                   <span className="mt-[6px] text-[14px] font-semibold text-[#236B4D]">
-                    {isLimitReached
-                      ? "Limite de 3 mídias atingido"
-                      : "Mídia adicionada"}
+                    Limite de {MAX_MEDIA_COUNT} mídias atingido
                   </span>
 
-                  {!isLimitReached && (
-                    <span className="mt-[6px] text-[12px] text-[#716B67]">
-                      Toque para adicionar mais (
-                      {MAX_MEDIA_COUNT - mediaFiles.length} restante
-                      {MAX_MEDIA_COUNT - mediaFiles.length !== 1 ? "s" : ""})
-                    </span>
-                  )}
+                  <span className="mt-[6px] text-[12px] text-[#716B67]">
+                    Remova uma foto se desejar trocar
+                  </span>
+                </>
+              ) : mediaFiles.length > 0 ? (
+                <>
+                  <Upload size={20} />
+
+                  <span className="mt-[6px] text-[14px] font-semibold">
+                    Adicionar mais fotos ou vídeos
+                  </span>
+
+                  <span className="mt-[6px] text-[12px] text-[#716B67]">
+                    Toque para adicionar mais (
+                    {MAX_MEDIA_COUNT - mediaFiles.length} restante
+                    {MAX_MEDIA_COUNT - mediaFiles.length !== 1 ? "s" : ""})
+                  </span>
                 </>
               ) : (
                 <>
