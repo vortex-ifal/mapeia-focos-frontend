@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { DesktopNavigationRail } from "@/components/manager/navigation/DesktopNavigationRail";
@@ -11,15 +12,37 @@ import {
   getHumanTriagePath,
   getInitialSelectedOccurrenceId,
   getOperationalOccurrenceById,
-  getOperationalOccurrences,
+  mapTriageQueueToOperationalOccurrences,
 } from "@/controllers/manager/operations.controller";
+import { getTriageQueue } from "@/services/api/operations.service";
 
 export function OperationsDashboard() {
-  const [occurrences] = useState(getOperationalOccurrences);
+  const [requestedSelectedOccurrenceId, setRequestedSelectedOccurrenceId] =
+    useState<string | null>(null);
 
-  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<
-    string | null
-  >(() => getInitialSelectedOccurrenceId(occurrences));
+  const triageQueueQuery = useQuery({
+    queryKey: ["operations", "triage-queue"],
+    queryFn: () =>
+      getTriageQueue({
+        limit: 50,
+        offset: 0,
+      }),
+    staleTime: 30_000,
+  });
+
+  const occurrences = triageQueueQuery.data
+    ? mapTriageQueueToOperationalOccurrences(triageQueueQuery.data)
+    : [];
+
+  const requestedOccurrenceStillExists =
+    requestedSelectedOccurrenceId !== null &&
+    occurrences.some(
+      (occurrence) => occurrence.id === requestedSelectedOccurrenceId,
+    );
+
+  const selectedOccurrenceId = requestedOccurrenceStillExists
+    ? requestedSelectedOccurrenceId
+    : getInitialSelectedOccurrenceId(occurrences);
 
   const selectedOccurrence = getOperationalOccurrenceById(
     occurrences,
@@ -29,6 +52,13 @@ export function OperationsDashboard() {
   const reviewHref = selectedOccurrence
     ? getHumanTriagePath(selectedOccurrence.id)
     : null;
+
+  const errorMessage =
+    triageQueueQuery.error instanceof Error
+      ? triageQueueQuery.error.message
+      : triageQueueQuery.isError
+        ? "Não foi possível carregar a fila operacional."
+        : null;
 
   return (
     <main
@@ -96,9 +126,7 @@ export function OperationsDashboard() {
               min-w-0
               grid-cols-1
               gap-4
-
               md:grid-cols-[280px_minmax(0,1fr)]
-
               lg:h-[calc(100dvh-132px)]
               lg:min-h-[560px]
               lg:max-h-[768px]
@@ -108,13 +136,18 @@ export function OperationsDashboard() {
             <OperationsQueue
               occurrences={occurrences}
               selectedOccurrenceId={selectedOccurrenceId}
-              onSelectOccurrence={setSelectedOccurrenceId}
+              onSelectOccurrence={setRequestedSelectedOccurrenceId}
+              loading={triageQueueQuery.isPending}
+              errorMessage={errorMessage}
+              onRetry={() => {
+                void triageQueueQuery.refetch();
+              }}
             />
 
             <OperationalMap
               occurrences={occurrences}
               selectedOccurrenceId={selectedOccurrenceId}
-              onSelectOccurrence={setSelectedOccurrenceId}
+              onSelectOccurrence={setRequestedSelectedOccurrenceId}
             />
 
             <div

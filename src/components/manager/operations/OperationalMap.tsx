@@ -1,6 +1,5 @@
 import clsx from "clsx";
 
-import { MapCluster } from "@/components/manager/map/MapCluster";
 import { MapControlsLegend } from "@/components/manager/map/MapControlsLegend";
 import { MapMarker } from "@/components/manager/map/MapMarker";
 import type { OperationalOccurrence } from "@/types/operations";
@@ -61,6 +60,10 @@ export function OperationalMap({
   selectedOccurrenceId,
   onSelectOccurrence,
 }: OperationalMapProps) {
+  const locatedOccurrences = occurrences.filter(
+    (occurrence) => occurrence.mapPosition !== null,
+  );
+
   return (
     <section
       aria-label="Mapa operacional"
@@ -102,20 +105,14 @@ export function OperationalMap({
         ))}
       </div>
 
-      <div
-        className="
-          absolute
-          left-[18%]
-          top-[28%]
-          -translate-x-1/2
-          -translate-y-1/2
-        "
-      >
-        <MapCluster count={12} />
-      </div>
-
-      {occurrences.map((occurrence) => {
+      {locatedOccurrences.map((occurrence) => {
         const selected = occurrence.id === selectedOccurrenceId;
+
+        const position = occurrence.mapPosition;
+
+        if (!position) {
+          return null;
+        }
 
         return (
           <button
@@ -126,29 +123,53 @@ export function OperationalMap({
             aria-pressed={selected}
             className={clsx(
               `
-                absolute
-                flex
-                -translate-x-1/2
-                -translate-y-1/2
-                items-center
-                justify-center
-                rounded-full
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-[#C94F32]
-                focus-visible:ring-offset-2
-              `,
+                  absolute
+                  flex
+                  -translate-x-1/2
+                  -translate-y-1/2
+                  items-center
+                  justify-center
+                  rounded-full
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-[#C94F32]
+                  focus-visible:ring-offset-2
+                `,
               selected ? "h-[52px] w-[52px]" : "h-8 w-8",
             )}
             style={{
-              left: `${occurrence.mapPosition.x}%`,
-              top: `${occurrence.mapPosition.y}%`,
+              left: `${position.x}%`,
+              top: `${position.y}%`,
             }}
           >
             <MapMarker selected={selected} />
           </button>
         );
       })}
+
+      {occurrences.length > 0 && locatedOccurrences.length === 0 ? (
+        <div
+          className="
+            absolute
+            left-1/2
+            top-1/2
+            -translate-x-1/2
+            -translate-y-1/2
+            rounded-[12px]
+            border
+            border-[#E9E0D4]
+            bg-white
+            px-4
+            py-3
+            text-center
+            text-[12px]
+            text-[#716B67]
+            shadow-sm
+          "
+        >
+          Nenhuma ocorrência possui localização disponível.
+        </div>
+      ) : null}
 
       <MapControlsLegend
         className="

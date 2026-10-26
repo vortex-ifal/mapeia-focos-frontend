@@ -123,39 +123,66 @@ export function OccurrenceContextPanel({
             gap-[7px]
           "
         >
-          <PriorityBadge value={occurrence.priority} />
+          {occurrence.priority ? (
+            <PriorityBadge value={occurrence.priority} />
+          ) : null}
 
           <StatusBadge label={occurrence.status.name} />
         </div>
 
         <LocationSummary
           address={occurrence.address}
-          context={occurrence.locationContext}
+          context={
+            occurrence.locationContext ??
+            "Contexto complementar não disponível."
+          }
           className="
             mt-4
             min-h-[88px]
           "
         />
 
-        <div
-          aria-label="Evidências da ocorrência"
-          className="
-            mt-[10px]
-            flex
-            gap-2
-          "
-        >
-          {occurrence.evidence.slice(0, 2).map((evidence) => (
-            <MediaThumbnail
-              key={evidence.id}
-              alt={evidence.alt}
+        {occurrence.evidence.length > 0 ? (
+          <div
+            aria-label="Evidências da ocorrência"
+            className="
+              mt-[10px]
+              flex
+              gap-2
+            "
+          >
+            {occurrence.evidence.slice(0, 2).map((evidence) => (
+              <MediaThumbnail
+                key={evidence.id}
+                alt={evidence.alt}
+                className="
+                    h-16
+                    w-[82px]
+                  "
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className="
+              mt-[10px]
+              rounded-[10px]
+              bg-[#F4EFE6]
+              px-3
+              py-[10px]
+            "
+          >
+            <p
               className="
-                  h-16
-                  w-[82px]
-                "
-            />
-          ))}
-        </div>
+                text-[11px]
+                leading-[1.4]
+                text-[#716B67]
+              "
+            >
+              Mídias não disponíveis nesta listagem.
+            </p>
+          </div>
+        )}
 
         <h3
           className="
@@ -177,7 +204,7 @@ export function OccurrenceContextPanel({
             text-[#716B67]
           "
         >
-          Evidência e localização disponíveis para revisão.
+          Localização e status disponíveis para revisão.
         </p>
       </div>
 

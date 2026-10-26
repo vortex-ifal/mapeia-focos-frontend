@@ -19,16 +19,16 @@ export type OperationalOccurrence = {
   id: string;
   displayCode: string;
   address: string;
-  neighborhood: string;
-  locationContext: string;
+  neighborhood: string | null;
+  locationContext: string | null;
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
   waitingMinutes: number;
-  nextAction: string;
-  priority: OperationalPriority;
+  nextAction: string | null;
+  priority: OperationalPriority | null;
   status: OperationalStatus;
-  mapPosition: OperationalMapPosition;
+  mapPosition: OperationalMapPosition | null;
   evidence: OperationalEvidence[];
 };
 

@@ -6,16 +6,23 @@ type OperationsQueueProps = {
   occurrences: OperationalOccurrence[];
   selectedOccurrenceId: string | null;
   onSelectOccurrence: (occurrenceId: string) => void;
+  loading?: boolean;
+  errorMessage?: string | null;
+  onRetry?: () => void;
 };
 
 export function OperationsQueue({
   occurrences,
   selectedOccurrenceId,
   onSelectOccurrence,
+  loading = false,
+  errorMessage = null,
+  onRetry,
 }: OperationsQueueProps) {
   return (
     <section
       aria-labelledby="operations-queue-title"
+      aria-busy={loading}
       className="
         flex
         h-[640px]
@@ -81,7 +88,66 @@ export function OperationsQueue({
           pr-1
         "
       >
-        {occurrences.length === 0 ? (
+        {loading ? (
+          <div
+            className="
+              rounded-[12px]
+              border
+              border-[#E9E0D4]
+              bg-[#FBF8F2]
+              px-4
+              py-8
+              text-center
+              text-[12px]
+              text-[#716B67]
+            "
+          >
+            Carregando fila operacional...
+          </div>
+        ) : null}
+
+        {!loading && errorMessage ? (
+          <div
+            role="alert"
+            className="
+              rounded-[12px]
+              border
+              border-[#F8E3E0]
+              bg-[#F8E3E0]
+              px-4
+              py-5
+            "
+          >
+            <p
+              className="
+                text-[12px]
+                leading-[1.45]
+                text-[#9D352D]
+              "
+            >
+              {errorMessage}
+            </p>
+
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="
+                  mt-3
+                  text-[12px]
+                  font-bold
+                  text-[#9D352D]
+                  underline
+                  underline-offset-2
+                "
+              >
+                Tentar novamente
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {!loading && !errorMessage && occurrences.length === 0 ? (
           <div
             className="
               rounded-[12px]
@@ -97,17 +163,19 @@ export function OperationsQueue({
           >
             Nenhuma ocorrência aguardando triagem.
           </div>
-        ) : (
-          occurrences.map((occurrence) => (
-            <OperationsQueueCard
-              key={occurrence.id}
-              occurrence={occurrence}
-              selected={occurrence.id === selectedOccurrenceId}
-              onSelect={() => onSelectOccurrence(occurrence.id)}
-              className="h-[106px]"
-            />
-          ))
-        )}
+        ) : null}
+
+        {!loading && !errorMessage
+          ? occurrences.map((occurrence) => (
+              <OperationsQueueCard
+                key={occurrence.id}
+                occurrence={occurrence}
+                selected={occurrence.id === selectedOccurrenceId}
+                onSelect={() => onSelectOccurrence(occurrence.id)}
+                className="h-[106px]"
+              />
+            ))
+          : null}
       </div>
     </section>
   );

@@ -1,11 +1,84 @@
-import { operationalOccurrencesFixture } from "@/components/manager/operations/operations.fixture";
-import type { OperationalOccurrence } from "@/types/operations";
+import type {
+  OperationalMapPosition,
+  OperationalOccurrence,
+  TriageQueueItemResponse,
+  TriageQueueResponse,
+} from "@/types/operations";
 
-export function getOperationalOccurrences(): OperationalOccurrence[] {
-  return operationalOccurrencesFixture.map((occurrence) => ({
-    ...occurrence,
-    mapPosition: { ...occurrence.mapPosition },
-    evidence: [...occurrence.evidence],
+const MAP_PADDING_PERCENT = 14;
+const MAP_CONTENT_PERCENT = 72;
+
+function formatOccurrenceDisplayId(id: string): string {
+  return `ID ${id.slice(0, 8).toUpperCase()}`;
+}
+
+function createMapPositions(
+  items: TriageQueueItemResponse[],
+): Map<string, OperationalMapPosition> {
+  const locatedItems = items.filter(
+    (
+      item,
+    ): item is TriageQueueItemResponse & {
+      latitude: number;
+      longitude: number;
+    } => item.latitude !== null && item.longitude !== null,
+  );
+
+  const positions = new Map<string, OperationalMapPosition>();
+
+  if (locatedItems.length === 0) {
+    return positions;
+  }
+
+  const latitudes = locatedItems.map((item) => item.latitude);
+  const longitudes = locatedItems.map((item) => item.longitude);
+
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+
+  const latitudeRange = maxLatitude - minLatitude;
+  const longitudeRange = maxLongitude - minLongitude;
+
+  for (const item of locatedItems) {
+    const normalizedX =
+      longitudeRange === 0
+        ? 0.5
+        : (item.longitude - minLongitude) / longitudeRange;
+
+    const normalizedY =
+      latitudeRange === 0 ? 0.5 : (maxLatitude - item.latitude) / latitudeRange;
+
+    positions.set(item.id, {
+      x: MAP_PADDING_PERCENT + normalizedX * MAP_CONTENT_PERCENT,
+      y: MAP_PADDING_PERCENT + normalizedY * MAP_CONTENT_PERCENT,
+    });
+  }
+
+  return positions;
+}
+
+export function mapTriageQueueToOperationalOccurrences(
+  response: TriageQueueResponse,
+): OperationalOccurrence[] {
+  const mapPositions = createMapPositions(response.items);
+
+  return response.items.map((item) => ({
+    id: item.id,
+    displayCode: formatOccurrenceDisplayId(item.id),
+    address: item.address,
+    neighborhood: null,
+    locationContext: null,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    createdAt: item.createdAt,
+    waitingMinutes: item.waitingMinutes,
+    nextAction: null,
+    priority: null,
+    status: item.status,
+    mapPosition: mapPositions.get(item.id) ?? null,
+    evidence: [],
   }));
 }
 

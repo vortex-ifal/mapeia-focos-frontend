@@ -16,11 +16,22 @@ export function OperationsQueueCard({
   onSelect,
   className,
 }: OperationsQueueCardProps) {
+  const secondaryLabel = occurrence.neighborhood
+    ? `${occurrence.status.name} · ${occurrence.neighborhood}`
+    : occurrence.status.name;
+
+  const waitingLabel = occurrence.nextAction
+    ? `${formatWaitingTime(
+        occurrence.waitingMinutes,
+      )} · próxima ação: ${occurrence.nextAction}`
+    : formatWaitingTime(occurrence.waitingMinutes);
+
   return (
     <button
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
+      title={occurrence.id}
       className={clsx(
         `
           flex
@@ -81,7 +92,7 @@ export function OperationsQueueCard({
           text-[#171717]
         "
       >
-        {occurrence.status.name} · {occurrence.neighborhood}
+        {secondaryLabel}
       </span>
 
       <span
@@ -95,8 +106,7 @@ export function OperationsQueueCard({
           text-[#716B67]
         "
       >
-        {formatWaitingTime(occurrence.waitingMinutes)} · próxima ação:{" "}
-        {occurrence.nextAction}
+        {waitingLabel}
       </span>
     </button>
   );
