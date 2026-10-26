@@ -28,10 +28,10 @@ import {
 
 import type { OccurrenceFormData } from "@/types/occurrence";
 
-const situationLabels: Record<string, string> = {
-  recipientes_agua_parada: "Recipientes com água parada",
-  agua_acumulada_terreno: "Água acumulada em terreno",
-  reservatorio_destampado: "Reservatório destampado",
+export const situationLabelsExamples: Record<string, string> = {
+  standingWaterContainers: "Recipientes com água parada",
+  accumulatedWaterTerrain: "Água acumulada em terreno",
+  uncoveredReservoir: "Reservatório destampado",
 };
 
 type SubmitView = "review" | "submitting" | "success";
@@ -239,7 +239,7 @@ export function ReviewOccurrence() {
   const hasMedia = mediaNames.length > 0;
 
   const lostMedia =
-    !hasMedia && Boolean(reviewOccurrence?.evidencia_nomes?.length);
+    !hasMedia && Boolean(reviewOccurrence?.evidenceNames?.length);
 
   const [previewUrls] = useState<string[]>(() => {
     return typeof window !== "undefined"
@@ -281,6 +281,7 @@ export function ReviewOccurrence() {
       const result = await submitOccurrence(data);
 
       const generatedReference =
+        result.protocol?.trim() ||
         result.protocolo?.trim() ||
         result.id?.trim() ||
         "Referência indisponível";
@@ -343,12 +344,6 @@ export function ReviewOccurrence() {
     return null;
   }
 
-  const hasContact = Boolean(
-    reviewOccurrence.nome?.trim() ||
-    reviewOccurrence.email?.trim() ||
-    reviewOccurrence.telefone?.trim(),
-  );
-
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
       <div className="mx-auto w-full px-[18px] pb-[22px] pt-[18px] md:max-w-[760px] md:px-8">
@@ -358,10 +353,10 @@ export function ReviewOccurrence() {
           <ReviewMap />
 
           <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-            <p className="text-[14px] font-bold">{reviewOccurrence.endereco}</p>
+            <p className="text-[14px] font-bold">{reviewOccurrence.address}</p>
 
             <p className="mt-1 text-[12px] text-[#716B67]">
-              {reviewOccurrence.localizacao_contexto ?? "Localização definida"}
+              {reviewOccurrence.locationContext ?? "Localização definida"}
             </p>
           </div>
         </section>
@@ -450,31 +445,15 @@ export function ReviewOccurrence() {
 
           <div className="mt-[14px] min-h-[150px] w-[63%] min-w-[224px] max-w-[320px] rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
             <p className="text-[14px] font-bold leading-[18px]">
-              {situationLabels[reviewOccurrence.tipo_situacao] ??
-                reviewOccurrence.tipo_situacao}
+              {situationLabelsExamples[reviewOccurrence.situationType] ??
+                reviewOccurrence.situationType}
             </p>
 
             <p className="mt-[6px] text-[13px] leading-[17px] text-[#716B67]">
-              {reviewOccurrence.descricao}
+              {reviewOccurrence.description}
             </p>
           </div>
         </section>
-
-        <div className="mt-[14px] flex min-h-[48px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-white px-[10px] py-2">
-          <span
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-              hasContact ? "border-[#C94F32]" : "border-[#E9E0D4] bg-[#F4EFE6]"
-            }`}
-          >
-            {hasContact && (
-              <span className="h-2 w-2 rounded-full bg-[#C94F32]" />
-            )}
-          </span>
-
-          <span className="ml-2 text-[13px] font-medium">
-            Informar dados de contato (opcional)
-          </span>
-        </div>
 
         {submitError && (
           <div className="mt-[14px] flex min-h-[86px] w-full items-center rounded-[12px] border border-[#E9E0D4] bg-[#F8E3E0] px-[12px]">

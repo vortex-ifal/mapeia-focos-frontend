@@ -70,7 +70,7 @@ export function RequestLocation() {
   const [mode, setMode] = useState<ScreenMode>("request");
 
   const [manualAddress, setManualAddress] = useState(
-    () => getOccurrenceDraft()?.endereco ?? "",
+    () => getOccurrenceDraft()?.address ?? "",
   );
 
   const [isLocating, setIsLocating] = useState(false);

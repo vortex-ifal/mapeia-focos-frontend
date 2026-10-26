@@ -94,23 +94,23 @@ export function requestCurrentCoordinates(): Promise<Coordinates> {
 
 export function saveSelectedLocation(location: SelectedLocation) {
   const currentDraft = getOccurrenceDraft() ?? {
-    endereco: "",
-    tipo_situacao: "",
-    descricao: "",
+    address: "",
+    situationType: "",
+    description: "",
   };
 
   saveOccurrenceDraft({
     ...currentDraft,
 
-    endereco: location.address,
+    address: location.address,
 
     latitude: location.source === "gps" ? location.latitude : undefined,
 
     longitude: location.source === "gps" ? location.longitude : undefined,
 
-    localizacao_origem: location.source,
+    locationSource: location.source,
 
-    localizacao_contexto:
+    locationContext:
       location.context ??
       (location.source === "gps"
         ? "Localização obtida pelo GPS"
