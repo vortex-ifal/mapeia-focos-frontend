@@ -1,19 +1,19 @@
 export type LocationSource = "gps" | "manual";
 
 export type OccurrenceDraft = {
-  endereco: string;
-  tipo_situacao: string;
-  descricao: string;
-  nome?: string;
+  address: string;
+  situationType: string;
+  description: string;
+  name?: string;
   email?: string;
-  telefone?: string;
-  evidencia_nomes?: string[];
+  phone?: string;
+  evidenceNames?: string[];
 
   latitude?: number;
   longitude?: number;
 
-  localizacao_origem?: LocationSource;
-  localizacao_contexto?: string;
+  locationSource?: LocationSource;
+  locationContext?: string;
 };
 
 export type OccurrenceFormData = OccurrenceDraft;
@@ -22,13 +22,13 @@ export type OccurrenceBackendPayload = {
   address: string;
   description: string;
   situationType?: string;
-  contact?: string;
   latitude?: number;
   longitude?: number;
 };
 
 export type OccurrenceResponse = {
   id?: string;
+  protocol?: string;
   protocolo?: string;
   status?: string;
 };

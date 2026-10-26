@@ -111,7 +111,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showContact, setShowContact] = useState(
-    Boolean(draft?.nome || draft?.email || draft?.telefone),
+    Boolean(draft?.name || draft?.email || draft?.phone),
   );
 
   const [mediaFiles, setMediaFiles] = useState<File[]>(() => getPendingFiles());
@@ -140,13 +140,13 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     resolver: zodResolver(occurrenceSchema),
 
     defaultValues: {
-      endereco: draft?.endereco ?? "",
-      tipo_situacao: draft?.tipo_situacao ?? "",
-      descricao: draft?.descricao ?? "",
-      nome: draft?.nome ?? "",
+      address: draft?.address ?? "",
+      situationType: draft?.situationType ?? "",
+      description: draft?.description ?? "",
+      name: draft?.name ?? "",
       email: draft?.email ?? "",
-      telefone: draft?.telefone ?? "",
-      evidencia_nomes: getPendingFiles().map((file) => file.name),
+      phone: draft?.phone ?? "",
+      evidenceNames: getPendingFiles().map((file) => file.name),
       latitude: draft?.latitude,
       longitude: draft?.longitude,
     },
@@ -154,8 +154,8 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
 
   useEffect(() => {
     if (
-      draft?.evidencia_nomes &&
-      draft.evidencia_nomes.length > 0 &&
+      draft?.evidenceNames &&
+      draft.evidenceNames.length > 0 &&
       getPendingFiles().length === 0
     ) {
       toast.info(
@@ -164,13 +164,13 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     }
   }, [draft]);
 
-  const endereco =
+  const address =
     useWatch({
       control,
-      name: "endereco",
+      name: "address",
     })?.trim() ?? "";
 
-  const hasLocation = endereco.length > 0;
+  const hasLocation = address.length > 0;
 
   const previewUrls = useMemo(() => {
     return mediaFiles.map((file) => URL.createObjectURL(file));
@@ -238,7 +238,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
         setMediaFiles(updatedFiles);
         setMediaNames(updatedNames);
 
-        setValue("evidencia_nomes", updatedNames);
+        setValue("evidenceNames", updatedNames);
 
         setPendingFiles(updatedFiles);
 
@@ -311,7 +311,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
     setMediaFiles(updatedFiles);
     setMediaNames(updatedNames);
 
-    setValue("evidencia_nomes", updatedNames);
+    setValue("evidenceNames", updatedNames);
 
     setPendingFiles(updatedFiles);
   }
@@ -325,21 +325,21 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       ...draft,
       ...currentValues,
 
-      nome: showContact ? currentValues.nome : undefined,
+      name: showContact ? currentValues.name : undefined,
 
       email: showContact ? currentValues.email : undefined,
 
-      telefone: showContact ? currentValues.telefone : undefined,
+      phone: showContact ? currentValues.phone : undefined,
 
-      evidencia_nomes: mediaNames.length > 0 ? mediaNames : undefined,
+      evidenceNames: mediaNames.length > 0 ? mediaNames : undefined,
 
       latitude: draft?.latitude,
 
       longitude: draft?.longitude,
 
-      localizacao_origem: draft?.localizacao_origem,
+      locationSource: draft?.locationSource,
 
-      localizacao_contexto: draft?.localizacao_contexto,
+      locationContext: draft?.locationContext,
     });
 
     router.push("/nova-ocorrencia/localizacao");
@@ -358,13 +358,13 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
       ...draft,
       ...data,
 
-      nome: showContact ? data.nome : undefined,
+      name: showContact ? data.name : undefined,
 
       email: showContact ? data.email : undefined,
 
-      telefone: showContact ? data.telefone : undefined,
+      phone: showContact ? data.phone : undefined,
 
-      evidencia_nomes: mediaNames.length > 0 ? mediaNames : undefined,
+      evidenceNames: mediaNames.length > 0 ? mediaNames : undefined,
     });
 
     router.push("/nova-ocorrencia/revisar");
@@ -417,10 +417,10 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               </button>
             ) : (
               <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-                <p className="text-[14px] font-bold">{endereco}</p>
+                <p className="text-[14px] font-bold">{address}</p>
 
                 <p className="mt-1 text-[12px] text-[#716B67]">
-                  {draft?.localizacao_contexto ?? "Localização definida"}
+                  {draft?.locationContext ?? "Localização definida"}
                 </p>
 
                 <button
@@ -433,9 +433,9 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               </div>
             )}
 
-            {errors.endereco && (
+            {errors.address && (
               <p className="mt-1 text-[11px] text-red-600">
-                {errors.endereco.message}
+                {errors.address.message}
               </p>
             )}
           </section>
@@ -565,7 +565,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               </span>
 
               <select
-                {...register("tipo_situacao")}
+                {...register("situationType")}
                 defaultValue=""
                 className="mt-[6px] w-full appearance-none bg-transparent pr-7 text-[14px] outline-none"
               >
@@ -573,15 +573,15 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   Escolha uma opção
                 </option>
 
-                <option value="recipientes_agua_parada">
+                <option value="standingWaterContainers">
                   Recipientes com água parada
                 </option>
 
-                <option value="agua_acumulada_terreno">
+                <option value="accumulatedWaterTerrain">
                   Água acumulada em terreno
                 </option>
 
-                <option value="reservatorio_destampado">
+                <option value="uncoveredReservoir">
                   Reservatório destampado
                 </option>
               </select>
@@ -592,9 +592,9 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               />
             </label>
 
-            {errors.tipo_situacao && (
+            {errors.situationType && (
               <p className="mt-1 text-[11px] text-red-600">
-                {errors.tipo_situacao.message}
+                {errors.situationType.message}
               </p>
             )}
 
@@ -604,15 +604,15 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
               </span>
 
               <textarea
-                {...register("descricao")}
+                {...register("description")}
                 placeholder="Descreva apenas o que você observou"
                 className="mt-[6px] h-[68px] w-full resize-none bg-transparent text-[14px] outline-none placeholder:text-[#666666]"
               />
             </label>
 
-            {errors.descricao && (
+            {errors.description && (
               <p className="mt-1 text-[11px] text-red-600">
-                {errors.descricao.message}
+                {errors.description.message}
               </p>
             )}
           </section>
@@ -650,7 +650,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   </span>
 
                   <input
-                    {...register("nome")}
+                    {...register("name")}
                     type="text"
                     className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
                   />
@@ -680,7 +680,7 @@ function NewOccurrenceForm({ draft }: { draft: OccurrenceFormData | null }) {
                   </span>
 
                   <input
-                    {...register("telefone")}
+                    {...register("phone")}
                     type="tel"
                     className="mt-[6px] w-full bg-transparent text-[14px] text-[#171717] outline-none"
                   />

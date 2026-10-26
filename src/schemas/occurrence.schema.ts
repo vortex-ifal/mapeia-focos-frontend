@@ -1,19 +1,19 @@
 import { z } from "zod";
 
 export const occurrenceSchema = z.object({
-  endereco: z
+  address: z
     .string()
     .trim()
     .min(3, "O endereço deve conter no mínimo 3 caracteres."),
 
-  tipo_situacao: z.string().min(1, "Selecione o tipo da situação."),
+  situationType: z.string().min(1, "Selecione o tipo da situação."),
 
-  descricao: z
+  description: z
     .string()
     .trim()
     .min(5, "A descrição deve conter no mínimo 5 caracteres."),
 
-  nome: z.string().trim().optional(),
+  name: z.string().trim().optional(),
 
   email: z
     .string()
@@ -22,9 +22,9 @@ export const occurrenceSchema = z.object({
     .or(z.literal(""))
     .optional(),
 
-  telefone: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
 
-  evidencia_nomes: z.array(z.string()).optional(),
+  evidenceNames: z.array(z.string()).optional(),
 
   latitude: z.number().optional(),
 

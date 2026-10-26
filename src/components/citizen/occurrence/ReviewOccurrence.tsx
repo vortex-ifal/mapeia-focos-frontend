@@ -29,10 +29,10 @@ import {
 
 import type { OccurrenceFormData } from "@/types/occurrence";
 
-const situationLabels: Record<string, string> = {
-  recipientes_agua_parada: "Recipientes com água parada",
-  agua_acumulada_terreno: "Água acumulada em terreno",
-  reservatorio_destampado: "Reservatório destampado",
+export const situationLabelsExamples: Record<string, string> = {
+  standingWaterContainers: "Recipientes com água parada",
+  accumulatedWaterTerrain: "Água acumulada em terreno",
+  uncoveredReservoir: "Reservatório destampado",
 };
 
 type SubmitView = "review" | "submitting" | "success";
@@ -237,7 +237,7 @@ export function ReviewOccurrence() {
   const hasMedia = mediaNames.length > 0;
 
   const lostMedia =
-    !hasMedia && Boolean(reviewOccurrence?.evidencia_nomes?.length);
+    !hasMedia && Boolean(reviewOccurrence?.evidenceNames?.length);
 
   const [previewUrls] = useState<string[]>(() => {
     return typeof window !== "undefined"
@@ -279,6 +279,7 @@ export function ReviewOccurrence() {
       const result = await submitOccurrence(data);
 
       const generatedReference =
+        result.protocol?.trim() ||
         result.protocolo?.trim() ||
         result.id?.trim() ||
         "Referência indisponível";
@@ -342,9 +343,9 @@ export function ReviewOccurrence() {
   }
 
   const hasContact = Boolean(
-    reviewOccurrence.nome?.trim() ||
+    reviewOccurrence.name?.trim() ||
     reviewOccurrence.email?.trim() ||
-    reviewOccurrence.telefone?.trim(),
+    reviewOccurrence.phone?.trim(),
   );
 
   return (
@@ -356,10 +357,10 @@ export function ReviewOccurrence() {
           <ReviewMap />
 
           <div className="mt-[14px] min-h-[88px] rounded-[12px] border border-[#E9E0D4] bg-white px-[13px] py-[11px]">
-            <p className="text-[14px] font-bold">{reviewOccurrence.endereco}</p>
+            <p className="text-[14px] font-bold">{reviewOccurrence.address}</p>
 
             <p className="mt-1 text-[12px] text-[#716B67]">
-              {reviewOccurrence.localizacao_contexto ?? "Localização definida"}
+              {reviewOccurrence.locationContext ?? "Localização definida"}
             </p>
           </div>
         </section>
@@ -448,12 +449,12 @@ export function ReviewOccurrence() {
 
           <div className="mt-[14px] min-h-[150px] w-[63%] min-w-[224px] max-w-[320px] rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
             <p className="text-[14px] font-bold leading-[18px]">
-              {situationLabels[reviewOccurrence.tipo_situacao] ??
-                reviewOccurrence.tipo_situacao}
+              {situationLabelsExamples[reviewOccurrence.situationType] ??
+                reviewOccurrence.situationType}
             </p>
 
             <p className="mt-[6px] text-[13px] leading-[17px] text-[#716B67]">
-              {reviewOccurrence.descricao}
+              {reviewOccurrence.description}
             </p>
           </div>
         </section>

@@ -9,16 +9,10 @@ import { buildApiUrl } from "./api.config";
 export async function createOccurrence(
   data: OccurrenceFormData,
 ): Promise<OccurrenceResponse> {
-  const contactParts: string[] = [];
-  if (data.nome?.trim()) contactParts.push(`Nome: ${data.nome.trim()}`);
-  if (data.email?.trim()) contactParts.push(`E-mail: ${data.email.trim()}`);
-  if (data.telefone?.trim()) contactParts.push(`Telefone: ${data.telefone.trim()}`);
-
   const payload: OccurrenceBackendPayload = {
-    address: data.endereco,
-    description: data.descricao,
-    situationType: data.tipo_situacao || undefined,
-    contact: contactParts.length > 0 ? contactParts.join(" | ") : undefined,
+    address: data.address,
+    description: data.description,
+    situationType: data.situationType || undefined,
     latitude: data.latitude,
     longitude: data.longitude,
   };
