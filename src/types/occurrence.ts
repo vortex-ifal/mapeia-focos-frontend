@@ -29,3 +29,10 @@ export type OccurrenceResponse = {
   protocolo?: string;
   status?: string;
 };
+
+export type OccurrenceStatusResponse = {
+  protocol: string;
+  statusKey: string;
+  statusName: string;
+};
+

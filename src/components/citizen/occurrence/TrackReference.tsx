@@ -4,12 +4,22 @@ import { ArrowLeft, CircleAlert, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 
+import {
+  searchOccurrenceByProtocol,
+  OccurrenceNotFoundError,
+  OccurrenceValidationError,
+  OccurrenceServerError,
+} from "@/controllers/citizen/occurrence.controller";
+
 export function TrackReference() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialReference =
-    searchParams.get("referencia") || searchParams.get("codigo") || "";
+  const initialReference = (
+    searchParams.get("referencia") ||
+    searchParams.get("codigo") ||
+    ""
+  ).toUpperCase();
 
   const [reference, setReference] = useState(initialReference);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,11 +51,30 @@ export function TrackReference() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    // Como o backend ainda não possui o endpoint pronto, a ação do botão é tratada no frontend estático
-    setTimeout(() => {
+    try {
+      const result = await searchOccurrenceByProtocol(trimmed);
+      router.push(
+        `/acompanhar-referencia/${encodeURIComponent(result.protocol)}`,
+      );
+    } catch (error: unknown) {
+      if (error instanceof OccurrenceNotFoundError) {
+        setErrorMessage(
+          "Protocolo não encontrado. Verifique o código digitado.",
+        );
+      } else if (error instanceof OccurrenceValidationError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof OccurrenceServerError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(
+          "Não foi possível realizar a consulta. Tente novamente mais tarde.",
+        );
+      }
+    } finally {
       setIsLoading(false);
-      setErrorMessage("Protocolo não encontrado. Verifique o código digitado.");
-    }, 600);
+    }
   }
 
   const isButtonDisabled = !reference.trim() || isLoading;
