@@ -210,7 +210,7 @@ export function OccurrenceStatus({ protocol }: OccurrenceStatusProps) {
 
               <button
                 type="button"
-                onClick={() => router.push("/")}
+                onClick={() => router.push("/inicio")}
                 className="flex h-[48px] w-full items-center justify-center rounded-[14px] border border-[#E9E0D4] bg-white px-4 text-center text-[14px] font-bold text-[#171717] transition hover:bg-[#F4EFE6] active:scale-[0.99]"
               >
                 Voltar para o início
