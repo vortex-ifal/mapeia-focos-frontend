@@ -11,6 +11,7 @@ const operationalStatusSchema = z.object({
 
 const triageQueueItemSchema = z.object({
   id: z.string(),
+  protocol: z.string(),
   address: z.string(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
@@ -20,27 +21,29 @@ const triageQueueItemSchema = z.object({
 });
 
 const triageQueueResponseSchema = z.object({
-  items: z.array(triageQueueItemSchema),
+  data: z.array(triageQueueItemSchema),
+  page: z.number(),
+  pageSize: z.number(),
   total: z.number(),
-  limit: z.number(),
-  offset: z.number(),
+  totalPages: z.number(),
 });
 
 type GetTriageQueueParams = {
-  limit?: number;
-  offset?: number;
+  page?: number;
+  pageSize?: number;
 };
 
 export async function getTriageQueue({
-  limit = 50,
-  offset = 0,
+  page = 1,
+  pageSize = 50,
 }: GetTriageQueueParams = {}): Promise<TriageQueueResponse> {
   const searchParams = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
+    page: String(page),
+    pageSize: String(pageSize),
+    statusKey: "registered",
   });
 
-  const endpoint = `${buildApiUrl("occurrences/triage")}?${searchParams.toString()}`;
+  const endpoint = `${buildApiUrl("occurrences")}?${searchParams.toString()}`;
 
   const response = await fetch(endpoint, {
     method: "GET",

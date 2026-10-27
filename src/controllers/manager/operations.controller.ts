@@ -8,10 +8,6 @@ import type {
 const MAP_PADDING_PERCENT = 14;
 const MAP_CONTENT_PERCENT = 72;
 
-function formatOccurrenceDisplayId(id: string): string {
-  return `ID ${id.slice(0, 8).toUpperCase()}`;
-}
-
 function createMapPositions(
   items: TriageQueueItemResponse[],
 ): Map<string, OperationalMapPosition> {
@@ -31,14 +27,18 @@ function createMapPositions(
   }
 
   const latitudes = locatedItems.map((item) => item.latitude);
+
   const longitudes = locatedItems.map((item) => item.longitude);
 
   const minLatitude = Math.min(...latitudes);
   const maxLatitude = Math.max(...latitudes);
+
   const minLongitude = Math.min(...longitudes);
+
   const maxLongitude = Math.max(...longitudes);
 
   const latitudeRange = maxLatitude - minLatitude;
+
   const longitudeRange = maxLongitude - minLongitude;
 
   for (const item of locatedItems) {
@@ -62,11 +62,12 @@ function createMapPositions(
 export function mapTriageQueueToOperationalOccurrences(
   response: TriageQueueResponse,
 ): OperationalOccurrence[] {
-  const mapPositions = createMapPositions(response.items);
+  const mapPositions = createMapPositions(response.data);
 
-  return response.items.map((item) => ({
+  return response.data.map((item) => ({
     id: item.id,
-    displayCode: formatOccurrenceDisplayId(item.id),
+    protocol: item.protocol,
+    displayCode: `#${item.protocol.toUpperCase()}`,
     address: item.address,
     neighborhood: null,
     locationContext: null,
@@ -109,6 +110,7 @@ export function formatWaitingTime(waitingMinutes: number): string {
   }
 
   const hours = Math.floor(safeMinutes / 60);
+
   const minutes = safeMinutes % 60;
 
   if (minutes === 0) {

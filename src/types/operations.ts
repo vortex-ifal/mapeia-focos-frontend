@@ -17,6 +17,7 @@ export type OperationalEvidence = {
 
 export type OperationalOccurrence = {
   id: string;
+  protocol: string;
   displayCode: string;
   address: string;
   neighborhood: string | null;
@@ -34,6 +35,7 @@ export type OperationalOccurrence = {
 
 export type TriageQueueItemResponse = {
   id: string;
+  protocol: string;
   address: string;
   latitude: number | null;
   longitude: number | null;
@@ -43,8 +45,9 @@ export type TriageQueueItemResponse = {
 };
 
 export type TriageQueueResponse = {
-  items: TriageQueueItemResponse[];
+  data: TriageQueueItemResponse[];
+  page: number;
+  pageSize: number;
   total: number;
-  limit: number;
-  offset: number;
+  totalPages: number;
 };

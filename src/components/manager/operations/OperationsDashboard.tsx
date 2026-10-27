@@ -24,8 +24,8 @@ export function OperationsDashboard() {
     queryKey: ["operations", "triage-queue"],
     queryFn: () =>
       getTriageQueue({
-        limit: 50,
-        offset: 0,
+        page: 1,
+        pageSize: 50,
       }),
     staleTime: 30_000,
   });
