@@ -30,9 +30,17 @@ export type OccurrenceResponse = {
   status?: string;
 };
 
+export type OccurrenceStatusKey =
+  | "registered"
+  | "under_review"
+  | "accepted"
+  | "forwarded_for_inspection"
+  | "resolved"
+  | "rejected";
+
 export type OccurrenceStatusResponse = {
   protocol: string;
-  statusKey: string;
-  statusName: string;
+  statusKey: OccurrenceStatusKey | string;
+  statusName?: string;
 };
 

@@ -158,12 +158,33 @@ export async function submitOccurrence(
 }
 
 const QUERIED_STATUS_KEY = "mapeia-queried-occurrence-status";
+const STATUS_EVENT = "mapeia:occurrence-status-change";
 
 export function saveQueriedOccurrenceStatus(data: OccurrenceStatusResponse) {
   if (typeof window === "undefined") {
     return;
   }
   sessionStorage.setItem(QUERIED_STATUS_KEY, JSON.stringify(data));
+  window.dispatchEvent(new Event(STATUS_EVENT));
+}
+
+export function getQueriedOccurrenceStatusSnapshot(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return sessionStorage.getItem(QUERIED_STATUS_KEY);
+}
+
+export function subscribeToQueriedOccurrenceStatus(callback: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+  window.addEventListener(STATUS_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(STATUS_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
 }
 
 export function getQueriedOccurrenceStatus(): OccurrenceStatusResponse | null {
@@ -186,6 +207,7 @@ export function clearQueriedOccurrenceStatus() {
     return;
   }
   sessionStorage.removeItem(QUERIED_STATUS_KEY);
+  window.dispatchEvent(new Event(STATUS_EVENT));
 }
 
 export async function searchOccurrenceByProtocol(
