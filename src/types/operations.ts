@@ -40,7 +40,7 @@ export type TriageQueueItemResponse = {
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
-  waitingMinutes: number;
+  priority: OperationalPriority | null;
   status: OperationalStatus;
 };
 

@@ -8,6 +8,18 @@ import type {
 const MAP_PADDING_PERCENT = 14;
 const MAP_CONTENT_PERCENT = 72;
 
+function calculateWaitingMinutes(createdAt: string): number {
+  const createdAtTimestamp = new Date(createdAt).getTime();
+
+  if (Number.isNaN(createdAtTimestamp)) {
+    return 0;
+  }
+
+  const elapsedMilliseconds = Date.now() - createdAtTimestamp;
+
+  return Math.max(0, Math.floor(elapsedMilliseconds / 60_000));
+}
+
 function createMapPositions(
   items: TriageQueueItemResponse[],
 ): Map<string, OperationalMapPosition> {
@@ -34,7 +46,6 @@ function createMapPositions(
   const maxLatitude = Math.max(...latitudes);
 
   const minLongitude = Math.min(...longitudes);
-
   const maxLongitude = Math.max(...longitudes);
 
   const latitudeRange = maxLatitude - minLatitude;
@@ -74,9 +85,9 @@ export function mapTriageQueueToOperationalOccurrences(
     latitude: item.latitude,
     longitude: item.longitude,
     createdAt: item.createdAt,
-    waitingMinutes: item.waitingMinutes,
+    waitingMinutes: calculateWaitingMinutes(item.createdAt),
     nextAction: null,
-    priority: null,
+    priority: item.priority,
     status: item.status,
     mapPosition: mapPositions.get(item.id) ?? null,
     evidence: [],

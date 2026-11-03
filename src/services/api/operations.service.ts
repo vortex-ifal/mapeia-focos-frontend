@@ -9,6 +9,8 @@ const operationalStatusSchema = z.object({
   name: z.string(),
 });
 
+const operationalPrioritySchema = z.enum(["low", "medium", "high"]);
+
 const triageQueueItemSchema = z.object({
   id: z.string(),
   protocol: z.string(),
@@ -16,7 +18,7 @@ const triageQueueItemSchema = z.object({
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   createdAt: z.string(),
-  waitingMinutes: z.number(),
+  priority: operationalPrioritySchema.nullable(),
   status: operationalStatusSchema,
 });
 
