@@ -443,7 +443,7 @@ export function ReviewOccurrence() {
         <section className="mt-[14px]">
           <h2 className="text-[18px] font-bold">Situação observada</h2>
 
-          <div className="mt-[14px] min-h-[150px] w-[63%] min-w-[224px] max-w-[320px] rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
+          <div className="mt-[14px] min-h-[150px] w-full rounded-[14px] border border-[#E9E0D4] bg-white p-[15px]">
             <p className="text-[14px] font-bold leading-[18px]">
               {situationLabelsExamples[reviewOccurrence.situationType] ??
                 reviewOccurrence.situationType}
