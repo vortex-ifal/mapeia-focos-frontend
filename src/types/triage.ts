@@ -1,4 +1,7 @@
-import type { OperationalStatus } from "@/types/operations";
+import type {
+  OperationalPriority,
+  OperationalStatus,
+} from "@/types/operations";
 
 export type TriagePhase = "review" | "confirm-validation" | "validated";
 
@@ -10,23 +13,27 @@ export type TriageEvidence = {
   url: string;
 };
 
+export type TriageMediaResponse = {
+  id: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  type: string;
+  uploadedAt: string;
+};
+
 export type OccurrenceListItemResponse = {
   id: string;
   protocol: string;
   address: string;
+  description: string;
+  situationType: string | null;
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
-  waitingMinutes: number;
+  updatedAt: string;
   status: OperationalStatus;
-};
-
-export type OccurrenceListResponse = {
-  data: OccurrenceListItemResponse[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
+  priority: OperationalPriority | null;
+  media: TriageMediaResponse[];
 };
 
 export type NearbyOccurrenceResponse = {
