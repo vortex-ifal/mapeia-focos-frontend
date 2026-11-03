@@ -1,5 +1,5 @@
-import { CitizenHome } from "@/components/citizen/home/CitizenHome";
+import { redirect } from "next/navigation";
 
-export default function HomePage() {
-  return <CitizenHome />;
+export default function RootPage() {
+  redirect("/entrar");
 }

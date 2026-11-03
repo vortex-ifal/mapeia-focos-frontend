@@ -44,7 +44,7 @@ export function CitizenLogin() {
       return;
     }
 
-    router.push("/");
+   router.push("/inicio");
   }
 
   return (

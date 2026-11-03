@@ -310,7 +310,7 @@ export function ReviewOccurrence() {
 
     setActiveOccurrence(null);
 
-    router.push("/");
+    router.push("/inicio");
   }
 
   function handleEdit() {
@@ -324,7 +324,7 @@ export function ReviewOccurrence() {
     setActiveOccurrence(null);
     setSubmitError(null);
 
-    router.push("/");
+    router.push("/inicio");
   }
 
   if (view === "submitting") {

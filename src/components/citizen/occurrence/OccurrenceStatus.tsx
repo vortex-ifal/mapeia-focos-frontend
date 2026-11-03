@@ -203,7 +203,6 @@ export function OccurrenceStatus({
           max-[360px]:px-4
         "
       >
-        {/* Header */}
         <header className="flex h-[52px] items-center gap-[10px]">
           <button
             type="button"
@@ -249,7 +248,6 @@ export function OccurrenceStatus({
           </section>
         ) : (
           <>
-            {/* Field: Código de referência */}
             <div className="flex w-full flex-col gap-[6px] rounded-[12px] border border-[#E9E0D4] bg-white p-[12px]">
               <span className="text-[12px] font-semibold leading-[16px] text-[#716B67]">
                 Código de referência
@@ -259,7 +257,6 @@ export function OccurrenceStatus({
               </p>
             </div>
 
-            {/* Status Badge */}
             <div className="flex">
               <StatusBadge
                 label={statusConfig.badgeLabel}
@@ -267,14 +264,12 @@ export function OccurrenceStatus({
               />
             </div>
 
-            {/* Timeline dinâmica com passos de acordo com o fluxo do status */}
             <OccurrenceTimeline
               steps={statusConfig.steps}
               currentStepIndex={statusConfig.stepIndex}
               activeDotClassName={statusConfig.dotClass}
             />
 
-            {/* Tracking Result: Bloco com título e descrição condicional */}
             <div className="flex w-full flex-col gap-[8px] rounded-[16px] border border-[#E9E0D4] bg-white p-[16px]">
               <h2 className="text-[17px] font-bold leading-[22px] text-[#171717]">
                 {statusConfig.title}
