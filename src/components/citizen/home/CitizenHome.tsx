@@ -2,10 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
+import {
+  AGENT_FIELD_DAY_ROUTE,
+  getAuthSession,
+} from "@/controllers/auth.controller";
 import { handleComingSoon } from "@/controllers/citizen/home.controller";
 
 export function CitizenHome() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const session = getAuthSession();
+    if (session?.role === "agent") {
+      router.replace(AGENT_FIELD_DAY_ROUTE);
+    }
+  }, [router]);
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
       <div

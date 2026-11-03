@@ -8,7 +8,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
-import { validateManagerCredentials } from "@/controllers/auth.controller";
+import {
+  MOCK_MANAGER_CREDENTIALS,
+  MOCK_USERS,
+  saveAuthSession,
+  validateManagerCredentials,
+} from "@/controllers/auth.controller";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
 
 import { AuthField } from "./AuthField";
@@ -43,6 +48,8 @@ export function ManagerLogin() {
       );
       return;
     }
+
+    saveAuthSession(MOCK_USERS[MOCK_MANAGER_CREDENTIALS.email]);
 
     router.push("/central-operacional");
   }
