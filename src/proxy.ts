@@ -10,6 +10,7 @@ import {
 
 const CITIZEN_ROUTES = [
   CITIZEN_HOME_ROUTE,
+  "/",
   "/nova-ocorrencia",
   "/acompanhar-referencia",
 ];
@@ -17,12 +18,12 @@ const CITIZEN_ROUTES = [
 const AGENT_ROUTES = [AGENT_FIELD_DAY_ROUTE, "/agente"];
 
 function isCitizenRoute(pathname: string): boolean {
-  if (pathname === CITIZEN_HOME_ROUTE) {
+  if (pathname === "/" || pathname === CITIZEN_HOME_ROUTE) {
     return true;
   }
 
   return CITIZEN_ROUTES.some(
-    (route) => route !== CITIZEN_HOME_ROUTE && pathname.startsWith(route),
+    (route) => route !== "/" && pathname.startsWith(route),
   );
 }
 

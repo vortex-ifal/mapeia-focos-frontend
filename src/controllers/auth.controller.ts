@@ -16,7 +16,7 @@ export const MOCK_MANAGER_CREDENTIALS = {
   password: "123456",
 } as const;
 
-export const CITIZEN_HOME_ROUTE = "/";
+export const CITIZEN_HOME_ROUTE = "/inicio";
 export const AGENT_FIELD_DAY_ROUTE = "/dia-em-campo";
 export const MANAGER_HOME_ROUTE = "/central-operacional";
 export const LOGIN_ROUTE = "/entrar";
