@@ -139,9 +139,14 @@ export function HumanTriage() {
   }
 
   function handleDefinePriority() {
-    // TODO: connect this action to the manual priority flow when its route is implemented.
-    toast.info(
-      "O fluxo de definição de prioridade será conectado na próxima etapa.",
+    if (!occurrenceId) {
+      return;
+    }
+
+    router.push(
+      `/central-operacional/prioridade?occurrenceId=${encodeURIComponent(
+        occurrenceId,
+      )}`,
     );
   }
 

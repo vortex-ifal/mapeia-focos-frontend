@@ -17,6 +17,16 @@ type CoordinateItem = {
   distanceMeters: number | null;
 };
 
+function calculateWaitingMinutes(createdAt: string): number {
+  const createdAtTimestamp = new Date(createdAt).getTime();
+
+  if (Number.isNaN(createdAtTimestamp)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - createdAtTimestamp) / 60_000));
+}
+
 export function mapOccurrenceToTriage(
   occurrence: OccurrenceListItemResponse,
 ): TriageOccurrence {
@@ -28,11 +38,9 @@ export function mapOccurrenceToTriage(
     latitude: occurrence.latitude,
     longitude: occurrence.longitude,
     createdAt: occurrence.createdAt,
-    waitingMinutes: occurrence.waitingMinutes,
+    waitingMinutes: calculateWaitingMinutes(occurrence.createdAt),
     status: occurrence.status,
-
-    // The current list API does not expose these fields yet.
-    description: null,
+    description: occurrence.description,
     evidence: [],
   };
 }
@@ -58,7 +66,7 @@ export function getLocationContext(occurrence: TriageOccurrence): string {
 }
 
 export function getOccurrenceDescription(occurrence: TriageOccurrence): string {
-  return occurrence.description ?? "Descrição não disponível nesta listagem.";
+  return occurrence.description ?? "Descrição não disponível.";
 }
 
 export function createTriageMapPoints(
@@ -101,7 +109,6 @@ export function createTriageMapPoints(
   const maxLatitude = Math.max(...latitudes);
 
   const minLongitude = Math.min(...longitudes);
-
   const maxLongitude = Math.max(...longitudes);
 
   const latitudeRange = maxLatitude - minLatitude;

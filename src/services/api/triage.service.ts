@@ -4,7 +4,6 @@ import { buildApiUrl } from "@/services/api/api.config";
 import type {
   ModerationStatusKey,
   OccurrenceListItemResponse,
-  OccurrenceListResponse,
   TerritorialContextResponse,
 } from "@/types/triage";
 
@@ -13,23 +12,29 @@ const operationalStatusSchema = z.object({
   name: z.string(),
 });
 
-const occurrenceListItemSchema = z.object({
+const operationalPrioritySchema = z.enum(["low", "medium", "high"]);
+
+const mediaSchema = z.object({
+  id: z.string(),
+  mimeType: z.string(),
+  fileSizeBytes: z.number(),
+  type: z.string(),
+  uploadedAt: z.string(),
+});
+
+const occurrenceDetailSchema = z.object({
   id: z.string(),
   protocol: z.string(),
   address: z.string(),
+  description: z.string(),
+  situationType: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   createdAt: z.string(),
-  waitingMinutes: z.number(),
+  updatedAt: z.string(),
   status: operationalStatusSchema,
-});
-
-const occurrenceListResponseSchema = z.object({
-  data: z.array(occurrenceListItemSchema),
-  page: z.number(),
-  pageSize: z.number(),
-  total: z.number(),
-  totalPages: z.number(),
+  priority: operationalPrioritySchema.nullable(),
+  media: z.array(mediaSchema),
 });
 
 const nearbyOccurrenceSchema = z.object({
@@ -66,16 +71,10 @@ async function getErrorMessage(
   return fallbackMessage;
 }
 
-async function getOccurrencesPage(
-  page: number,
-  pageSize: number,
-): Promise<OccurrenceListResponse> {
-  const searchParams = new URLSearchParams({
-    page: String(page),
-    pageSize: String(pageSize),
-  });
-
-  const endpoint = `${buildApiUrl("occurrences")}?${searchParams.toString()}`;
+export async function getOccurrenceForTriage(
+  occurrenceId: string,
+): Promise<OccurrenceListItemResponse> {
+  const endpoint = buildApiUrl(`occurrences/${occurrenceId}`);
 
   const response = await fetch(endpoint, {
     method: "GET",
@@ -101,7 +100,7 @@ async function getOccurrencesPage(
     throw new Error("A API retornou uma resposta inválida.");
   }
 
-  const parsedResponse = occurrenceListResponseSchema.safeParse(responseData);
+  const parsedResponse = occurrenceDetailSchema.safeParse(responseData);
 
   if (!parsedResponse.success) {
     throw new Error(
@@ -110,29 +109,6 @@ async function getOccurrencesPage(
   }
 
   return parsedResponse.data;
-}
-
-export async function getOccurrenceForTriage(
-  occurrenceId: string,
-): Promise<OccurrenceListItemResponse> {
-  const pageSize = 100;
-  let currentPage = 1;
-  let totalPages = 1;
-
-  do {
-    const response = await getOccurrencesPage(currentPage, pageSize);
-
-    const occurrence = response.data.find((item) => item.id === occurrenceId);
-
-    if (occurrence) {
-      return occurrence;
-    }
-
-    totalPages = response.totalPages;
-    currentPage += 1;
-  } while (currentPage <= totalPages);
-
-  throw new Error("A ocorrência selecionada não foi encontrada.");
 }
 
 export async function getTerritorialContext(
