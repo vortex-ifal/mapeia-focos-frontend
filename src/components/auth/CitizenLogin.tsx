@@ -8,7 +8,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
-import { validateCitizenCredentials } from "@/controllers/auth.controller";
+import {
+  authenticateUser,
+  resolveHomeRouteByRole,
+  saveAuthSession,
+} from "@/controllers/auth.controller";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
 
 import { AuthField } from "./AuthField";
@@ -35,16 +39,22 @@ export function CitizenLogin() {
     setAuthenticationError(null);
 
     // TODO: Replace mocked authentication with the authentication API.
-    const isAuthenticated = validateCitizenCredentials(data);
+    const authResult = authenticateUser(data);
 
-    if (!isAuthenticated) {
+    if (!authResult.success || !authResult.user) {
       setAuthenticationError(
-        "E-mail ou senha inválidos. Verifique os dados informados.",
+        authResult.error ??
+          "E-mail ou senha inválidos. Verifique os dados informados.",
       );
       return;
     }
 
-   router.push("/inicio");
+    saveAuthSession(authResult.user);
+
+    const userRole = authResult.user.role ?? authResult.user.perfil;
+    const targetRoute = resolveHomeRouteByRole(userRole);
+
+    router.push(targetRoute);
   }
 
   return (
