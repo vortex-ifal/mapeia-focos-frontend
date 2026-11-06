@@ -1,6 +1,5 @@
 import { toast } from "react-toastify";
 
-import { FIELD_DAY_FIXTURE } from "@/services/api/field-day.service";
 import type {
   FieldDayData,
   FieldDayNextPriority,
@@ -135,11 +134,20 @@ export function resolveNextPriority(
   };
 }
 
+export const INITIAL_FIELD_DAY_STATS: FieldDayStats = {
+  assignedActivitiesCount: 0,
+  highPriorityCount: 0,
+  indicatedInspectionsCount: 0,
+};
+
 export function mapOccurrencesToFieldDayData(
   occurrences: OccurrenceListApiItem[] | undefined,
 ): FieldDayData {
-  if (occurrences === undefined) {
-    return FIELD_DAY_FIXTURE;
+  if (!occurrences) {
+    return {
+      stats: INITIAL_FIELD_DAY_STATS,
+      nextPriority: null,
+    };
   }
 
   const stats = calculateFieldDayStats(occurrences);

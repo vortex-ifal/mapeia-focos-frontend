@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -9,7 +10,6 @@ import {
   formatCardNumber,
   formatWaitingTime,
   getSavedOfflineSurveySnapshot,
-  handleRegisterOccurrence,
   handleResumeSavedSurvey,
   handleViewDayPriorities,
   mapOccurrencesToFieldDayData,
@@ -103,6 +103,61 @@ export function FieldDay() {
           </p>
         </section>
 
+        {occurrencesQuery.isError ? (
+          <div
+            role="alert"
+            className="
+              mt-4
+              rounded-[14px]
+              border
+              border-[#F8E3E0]
+              bg-[#F8E3E0]
+              p-4
+              text-left
+            "
+          >
+            <p className="text-[12px] leading-5 text-[#9D352D]">
+              {occurrencesQuery.error instanceof Error
+                ? occurrencesQuery.error.message
+                : "Não foi possível carregar as atividades do dia da API."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                void occurrencesQuery.refetch();
+              }}
+              className="
+                mt-2
+                text-[12px]
+                font-bold
+                text-[#9D352D]
+                underline
+                underline-offset-2
+              "
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : null}
+
+        {occurrencesQuery.isPending ? (
+          <div
+            className="
+              mt-4
+              rounded-[14px]
+              border
+              border-[#E9E0D4]
+              bg-white
+              p-4
+              text-center
+              text-[13px]
+              text-[#716B67]
+            "
+          >
+            Carregando informações do dia...
+          </div>
+        ) : null}
+
         <section
           aria-label="Resumo numérico de atividades"
           className="mt-6 grid grid-cols-3 gap-2.5 max-[360px]:gap-2"
@@ -130,7 +185,9 @@ export function FieldDay() {
                 text-[#171717]
               "
             >
-              {formatCardNumber(stats.assignedActivitiesCount)}
+              {occurrencesQuery.isPending
+                ? "—"
+                : formatCardNumber(stats.assignedActivitiesCount)}
             </span>
             <span
               className="
@@ -167,7 +224,9 @@ export function FieldDay() {
                 text-[#171717]
               "
             >
-              {formatCardNumber(stats.highPriorityCount)}
+              {occurrencesQuery.isPending
+                ? "—"
+                : formatCardNumber(stats.highPriorityCount)}
             </span>
             <span
               className="
@@ -204,7 +263,9 @@ export function FieldDay() {
                 text-[#171717]
               "
             >
-              {formatCardNumber(stats.indicatedInspectionsCount)}
+              {occurrencesQuery.isPending
+                ? "—"
+                : formatCardNumber(stats.indicatedInspectionsCount)}
             </span>
             <span
               className="
@@ -236,21 +297,23 @@ export function FieldDay() {
               Próxima prioridade
             </h2>
 
-            <span
-              className="
-                flex
-                h-7
-                items-center
-                rounded-full
-                bg-[#FAEBC8]
-                px-3
-                text-[12px]
-                font-semibold
-                text-[#171717]
-              "
-            >
-              Prioridade alta
-            </span>
+            {nextPriority ? (
+              <span
+                className="
+                  flex
+                  h-7
+                  items-center
+                  rounded-full
+                  bg-[#FAEBC8]
+                  px-3
+                  text-[12px]
+                  font-semibold
+                  text-[#171717]
+                "
+              >
+                Prioridade alta
+              </span>
+            ) : null}
           </div>
 
           {nextPriority ? (
@@ -300,7 +363,7 @@ export function FieldDay() {
                 {nextPriority.nextAction}
               </p>
             </div>
-          ) : (
+          ) : !occurrencesQuery.isPending ? (
             <div
               className="
                 mt-3
@@ -316,7 +379,7 @@ export function FieldDay() {
             >
               Nenhuma ocorrência prioritária atribuída no momento.
             </div>
-          )}
+          ) : null}
         </section>
 
         <section
@@ -352,9 +415,8 @@ export function FieldDay() {
             Ver prioridades do dia
           </button>
 
-          <button
-            type="button"
-            onClick={handleRegisterOccurrence}
+          <Link
+            href="/nova-ocorrencia"
             className="
               flex
               h-[52px]
@@ -370,6 +432,7 @@ export function FieldDay() {
               text-[14px]
               font-bold
               text-[#171717]
+              no-underline
               transition
               duration-150
               hover:bg-[#F4EFE6]
@@ -381,7 +444,7 @@ export function FieldDay() {
             "
           >
             Registrar ocorrência
-          </button>
+          </Link>
 
           <button
             type="button"
