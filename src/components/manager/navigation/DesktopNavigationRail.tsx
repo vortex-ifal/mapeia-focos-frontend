@@ -23,6 +23,8 @@ const navigationItems = [
   {
     label: "Mapa",
     icon: Map,
+    href: "/central-operacional/mapa",
+    section: "map",
   },
   {
     label: "Ocorrências",
@@ -87,9 +89,11 @@ export function DesktopNavigationRail() {
           const active =
             "section" in item && item.section === "operations"
               ? pathname === "/central-operacional"
-              : "section" in item && item.section === "occurrences"
-                ? occurrenceSectionActive
-                : false;
+              : "section" in item && item.section === "map"
+                ? pathname.startsWith("/central-operacional/mapa")
+                : "section" in item && item.section === "occurrences"
+                  ? occurrenceSectionActive
+                  : false;
 
           return (
             <DesktopNavItem
