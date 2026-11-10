@@ -79,7 +79,11 @@ export function ManualPriority() {
 
       toast.success("Prioridade definida com sucesso.");
 
-      router.push("/central-operacional");
+      router.push(
+        `/central-operacional/atribuicao?occurrenceId=${encodeURIComponent(
+          occurrenceId as string,
+        )}`,
+      );
     },
   });
 
