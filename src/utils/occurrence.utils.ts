@@ -10,7 +10,7 @@ const STREET_PREFIXES = [
   "praca ",
 ];
 
-function normalizeText(value: string): string {
+export function normalizeText(value: string): string {
   return value
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -77,19 +77,13 @@ export function formatElapsedDuration(elapsedMinutes: number): string {
   }
 
   const hours = Math.floor(safeMinutes / 60);
-
   const minutes = safeMinutes % 60;
 
   if (hours < 24) {
-    if (minutes === 0) {
-      return `${hours} h`;
-    }
-
-    return `${hours} h ${minutes} min`;
+    return `${hours} h ${String(minutes).padStart(2, "0")}`;
   }
 
   const days = Math.floor(hours / 24);
-
   const remainingHours = hours % 24;
 
   if (remainingHours === 0) {
@@ -100,5 +94,29 @@ export function formatElapsedDuration(elapsedMinutes: number): string {
 }
 
 export function formatRelativeElapsedTime(value: string): string {
-  return `há ${formatElapsedDuration(calculateElapsedMinutes(value))}`;
+  const elapsedMinutes = calculateElapsedMinutes(value);
+
+  if (elapsedMinutes < 60) {
+    return `há ${elapsedMinutes} min`;
+  }
+
+  const hours = Math.floor(elapsedMinutes / 60);
+  const remainingMinutes = elapsedMinutes % 60;
+
+  if (hours < 24) {
+    if (remainingMinutes === 0) {
+      return `há ${hours} h`;
+    }
+
+    return `há ${hours} h ${remainingMinutes} min`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (remainingHours === 0) {
+    return `há ${days} d`;
+  }
+
+  return `há ${days} d ${remainingHours} h`;
 }
