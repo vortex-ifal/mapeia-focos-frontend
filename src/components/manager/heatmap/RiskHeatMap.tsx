@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { HeatLayer } from "leaflet.heat";
 import "leaflet/dist/leaflet.css";
 
-import { HeatMapLegend } from "@/components/manager/heatmap/HeatMapLegend";
+import {
+  HeatMapLegend,
+  type HeatMapLayerMode,
+} from "@/components/manager/heatmap/HeatMapLegend";
+import { createOccurrenceDivIcon } from "@/components/manager/map/leaflet-icons";
 import {
   ARAPIRACA_CENTER,
   ARAPIRACA_ZOOM,
@@ -21,6 +25,8 @@ export function RiskHeatMap({ points, total }: RiskHeatMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const heatLayerRef = useRef<HeatLayer | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const [layerMode, setLayerMode] = useState<HeatMapLayerMode>("both");
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -39,15 +45,19 @@ export function RiskHeatMap({ points, total }: RiskHeatMapProps) {
       maxZoom: 19,
     }).addTo(map);
 
+    const markersLayer = L.layerGroup();
+    markersLayerRef.current = markersLayer;
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
       heatLayerRef.current = null;
+      markersLayerRef.current = null;
     };
   }, []);
 
+  // Sync points data with heat layer and markers layer
   useEffect(() => {
     const map = mapRef.current;
     if (!map) {
@@ -77,12 +87,73 @@ export function RiskHeatMap({ points, total }: RiskHeatMapProps) {
         },
       });
 
-      heatLayer.addTo(map);
       heatLayerRef.current = heatLayer;
     }
 
+    if (markersLayerRef.current) {
+      markersLayerRef.current.clearLayers();
+      for (const p of points) {
+        const marker = L.marker([p.latitude, p.longitude], {
+          icon: createOccurrenceDivIcon(false),
+        });
+
+        marker.bindTooltip("Foco mapeado", {
+          direction: "top",
+        });
+
+        markersLayerRef.current.addLayer(marker);
+      }
+    }
+
+    // Attach layers according to current layerMode
+    const heatLayer = heatLayerRef.current;
+    const markersLayer = markersLayerRef.current;
+
+    if (layerMode === "heat" || layerMode === "both") {
+      if (heatLayer && !map.hasLayer(heatLayer)) {
+        heatLayer.addTo(map);
+      }
+    } else if (heatLayer && map.hasLayer(heatLayer)) {
+      map.removeLayer(heatLayer);
+    }
+
+    if (layerMode === "points" || layerMode === "both") {
+      if (markersLayer && !map.hasLayer(markersLayer)) {
+        markersLayer.addTo(map);
+      }
+    } else if (markersLayer && map.hasLayer(markersLayer)) {
+      map.removeLayer(markersLayer);
+    }
+
     map.setView(ARAPIRACA_CENTER, ARAPIRACA_ZOOM);
-  }, [points]);
+  }, [points, layerMode]);
+
+  // Handle layer mode changes
+  useEffect(() => {
+    const map = mapRef.current;
+    const heatLayer = heatLayerRef.current;
+    const markersLayer = markersLayerRef.current;
+
+    if (!map) {
+      return;
+    }
+
+    if (layerMode === "heat" || layerMode === "both") {
+      if (heatLayer && !map.hasLayer(heatLayer)) {
+        heatLayer.addTo(map);
+      }
+    } else if (heatLayer && map.hasLayer(heatLayer)) {
+      map.removeLayer(heatLayer);
+    }
+
+    if (layerMode === "points" || layerMode === "both") {
+      if (markersLayer && !map.hasLayer(markersLayer)) {
+        markersLayer.addTo(map);
+      }
+    } else if (markersLayer && map.hasLayer(markersLayer)) {
+      map.removeLayer(markersLayer);
+    }
+  }, [layerMode]);
 
   function handleRecenter() {
     if (mapRef.current) {
@@ -111,6 +182,8 @@ export function RiskHeatMap({ points, total }: RiskHeatMapProps) {
       <HeatMapLegend
         total={total}
         onRecenter={handleRecenter}
+        layerMode={layerMode}
+        onLayerModeChange={setLayerMode}
         className="
           absolute
           bottom-4

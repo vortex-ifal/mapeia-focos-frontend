@@ -1,18 +1,24 @@
-import { Flame, LocateFixed } from "lucide-react";
+import { Flame, Layers3, LocateFixed } from "lucide-react";
 import clsx from "clsx";
 
 import { formatHeatmapTotal } from "@/controllers/manager/heatmap.controller";
+
+export type HeatMapLayerMode = "heat" | "points" | "both";
 
 type HeatMapLegendProps = {
   total: number;
   className?: string;
   onRecenter?: () => void;
+  layerMode?: HeatMapLayerMode;
+  onLayerModeChange?: (mode: HeatMapLayerMode) => void;
 };
 
 export function HeatMapLegend({
   total,
   className,
   onRecenter,
+  layerMode = "both",
+  onLayerModeChange,
 }: HeatMapLegendProps) {
   return (
     <div
@@ -75,6 +81,66 @@ export function HeatMapLegend({
           <span>Alta densidade</span>
         </div>
       </div>
+
+      {onLayerModeChange ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-[10px] font-semibold text-[#584A57]">
+            <span className="flex items-center gap-1">
+              <Layers3 size={12} aria-hidden="true" />
+              Camadas
+            </span>
+            <span className="text-[10px] font-normal text-[#716B67]">
+              {layerMode === "heat"
+                ? "Mancha térmica"
+                : layerMode === "points"
+                  ? "Pinos individuais"
+                  : "Térmica e pinos"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1 rounded-[8px] bg-[#F4EFE6] p-0.5">
+            <button
+              type="button"
+              onClick={() => onLayerModeChange("heat")}
+              aria-pressed={layerMode === "heat"}
+              className={clsx(
+                "rounded-[6px] py-1 text-center text-[10px] font-medium transition-colors",
+                layerMode === "heat"
+                  ? "bg-white font-bold text-[#171717] shadow-xs"
+                  : "text-[#716B67] hover:text-[#171717]",
+              )}
+            >
+              Calor
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayerModeChange("points")}
+              aria-pressed={layerMode === "points"}
+              className={clsx(
+                "rounded-[6px] py-1 text-center text-[10px] font-medium transition-colors",
+                layerMode === "points"
+                  ? "bg-white font-bold text-[#171717] shadow-xs"
+                  : "text-[#716B67] hover:text-[#171717]",
+              )}
+            >
+              Pontos
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayerModeChange("both")}
+              aria-pressed={layerMode === "both"}
+              className={clsx(
+                "rounded-[6px] py-1 text-center text-[10px] font-medium transition-colors",
+                layerMode === "both"
+                  ? "bg-white font-bold text-[#171717] shadow-xs"
+                  : "text-[#716B67] hover:text-[#171717]",
+              )}
+            >
+              Ambos
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {onRecenter ? (
         <button
