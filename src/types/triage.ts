@@ -10,7 +10,8 @@ export type ModerationStatusKey = "accepted" | "rejected";
 export type TriageEvidence = {
   id: string;
   alt: string;
-  url: string;
+  url: string | null;
+  mimeType: string;
 };
 
 export type TriageMediaResponse = {
@@ -19,6 +20,8 @@ export type TriageMediaResponse = {
   fileSizeBytes: number;
   type: string;
   uploadedAt: string;
+  signedUrl: string | null;
+  signedUrlExpiresAt: string | null;
 };
 
 export type OccurrenceListItemResponse = {

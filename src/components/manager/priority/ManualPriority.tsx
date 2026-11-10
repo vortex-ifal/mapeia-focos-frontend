@@ -1,6 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -77,9 +79,27 @@ export function ManualPriority() {
         },
       );
 
+      /*
+       * Invalidate the occurrence details cache so that the detail screen
+       * receives the updated priority when the user returns.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: ["manager", "occurrence", occurrenceId],
+      });
+
       toast.success("Prioridade definida com sucesso.");
 
-      router.push("/central-operacional");
+      /*
+       * T033 -> T035
+       *
+       * After the occurrence receives a priority, the next operational step
+       * is assigning an agent.
+       */
+      router.push(
+        `/central-operacional/atribuicao?occurrenceId=${encodeURIComponent(
+          occurrenceId as string,
+        )}`,
+      );
     },
   });
 
@@ -165,28 +185,60 @@ export function ManualPriority() {
       >
         <header
           className="
-            flex
+            grid
             h-14
-            items-start
-            gap-4
-            lg:grid
-            lg:grid-cols-[64px_minmax(0,1fr)]
-            lg:gap-3
+            grid-cols-[64px_minmax(0,1fr)]
+            gap-3
           "
         >
           <ManagerHomeShortcut className="ml-1" />
 
-          <h1
+          <div
             className="
-              pt-2
-              text-[30px]
-              font-extrabold
-              leading-[1.2]
-              tracking-[-0.6px]
+              flex
+              items-center
+              gap-3
+              pt-1
             "
           >
-            Priority / Set
-          </h1>
+            <Link
+              href={`/central-operacional/ocorrencias/${encodeURIComponent(
+                occurrenceId,
+              )}`}
+              aria-label="Voltar para detalhes da ocorrência"
+              title="Voltar"
+              className="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-[10px]
+                text-[#584A57]
+                transition-colors
+                hover:bg-[#F4EFE6]
+                hover:text-[#C94F32]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
+            >
+              <ChevronLeft size={24} strokeWidth={1.8} aria-hidden="true" />
+            </Link>
+
+            <h1
+              className="
+                text-[30px]
+                font-extrabold
+                leading-[1.2]
+                tracking-[-0.6px]
+              "
+            >
+              Definir prioridade
+            </h1>
+          </div>
         </header>
 
         <div
@@ -271,7 +323,7 @@ function PriorityPageState({ message, error = false }: PriorityPageStateProps) {
               tracking-[-0.6px]
             "
           >
-            Priority / Set
+            Definir prioridade
           </h1>
         </header>
 

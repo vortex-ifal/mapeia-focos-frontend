@@ -1,22 +1,32 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ImageIcon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 import { DesktopNavigationRail } from "@/components/manager/navigation/DesktopNavigationRail";
 import { ManagerHomeShortcut } from "@/components/manager/navigation/ManagerHomeShortcut";
+import { MediaThumbnail } from "@/components/manager/operations/MediaThumbnail";
 import { PriorityBadge } from "@/components/ui/PriorityBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
-  formatElapsedTime,
+  canAssignOccurrenceAgent,
+  canManageOccurrencePriority,
   getLocationContext,
+  getOccurrenceAssignmentPath,
   getOccurrencePriorityLabel,
+  getOccurrencePriorityPath,
   getOccurrenceProgress,
   getOccurrenceStatusLabel,
+  getOccurrenceTriagePath,
+  needsOccurrenceTriage,
 } from "@/controllers/manager/occurrence-details.controller";
 import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
-import type { OccurrenceDetail } from "@/types/occurrence-details";
+import type {
+  OccurrenceDetail,
+  OccurrenceDetailMedia,
+} from "@/types/occurrence-details";
+import { formatRelativeElapsedTime } from "@/utils/occurrence.utils";
 
 type OccurrenceDetailsProps = {
   occurrenceId: string;
@@ -101,7 +111,6 @@ export function OccurrenceDetails({ occurrenceId }: OccurrenceDetailsProps) {
                 font-extrabold
                 leading-[1.2]
                 tracking-[-0.6px]
-                text-[#171717]
               "
             >
               Detalhe da Ocorrência
@@ -227,7 +236,6 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
               px-3
               text-[12px]
               font-semibold
-              text-[#171717]
             "
           >
             Sem prioridade
@@ -248,21 +256,12 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
           py-[11px]
         "
       >
-        <p
-          className="
-            text-[13px]
-            font-bold
-            leading-[1.4]
-          "
-        >
-          {occurrence.address}
-        </p>
+        <p className="text-[13px] font-bold">{occurrence.address}</p>
 
         <p
           className="
             mt-1
             text-[12px]
-            leading-[1.4]
             text-[#716B67]
           "
         >
@@ -270,10 +269,12 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
         </p>
       </div>
 
-      <EvidenceSection occurrence={occurrence} />
+      <EvidenceSection
+        media={occurrence.media}
+        protocol={occurrence.protocol}
+      />
 
       <section
-        aria-labelledby="description-title"
         className="
           mt-[10px]
           rounded-[12px]
@@ -283,16 +284,7 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
           py-[14px]
         "
       >
-        <h3
-          id="description-title"
-          className="
-            text-[14px]
-            font-bold
-            leading-[1.3]
-          "
-        >
-          Descrição da ocorrência
-        </h3>
+        <h3 className="text-[14px] font-bold">Descrição da ocorrência</h3>
 
         <p
           className="
@@ -306,7 +298,6 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
       </section>
 
       <section
-        aria-labelledby="progress-title"
         className="
           mt-[10px]
           rounded-[12px]
@@ -316,14 +307,7 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
           py-[14px]
         "
       >
-        <h3
-          id="progress-title"
-          className="
-            text-[14px]
-            font-bold
-            leading-[1.3]
-          "
-        >
+        <h3 className="text-[14px] font-bold">
           Andamento / histórico resumido
         </h3>
 
@@ -339,36 +323,28 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
             <div
               key={`${item.label}-${index}`}
               className="
-                  flex
-                  min-h-7
-                  items-center
-                  gap-[10px]
-                "
+                flex
+                min-h-7
+                items-center
+                gap-[10px]
+              "
             >
               <span
-                aria-hidden="true"
                 className={`
-                    h-[18px]
-                    w-[18px]
-                    shrink-0
-                    rounded-full
-                    border
-                    ${
-                      item.completed
-                        ? "border-[#584A57] bg-[#584A57]"
-                        : "border-[#E9E0D4] bg-white"
-                    }
-                  `}
+                  h-[18px]
+                  w-[18px]
+                  shrink-0
+                  rounded-full
+                  border
+                  ${
+                    item.completed
+                      ? "border-[#584A57] bg-[#584A57]"
+                      : "border-[#E9E0D4] bg-white"
+                  }
+                `}
               />
 
-              <p
-                className="
-                    text-[13px]
-                    leading-[1.4]
-                  "
-              >
-                {item.label}
-              </p>
+              <p className="text-[13px]">{item.label}</p>
             </div>
           ))}
         </div>
@@ -378,59 +354,86 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
 }
 
 type EvidenceSectionProps = {
-  occurrence: OccurrenceDetail;
+  media: OccurrenceDetailMedia[];
+  protocol: string;
 };
 
-function EvidenceSection({ occurrence }: EvidenceSectionProps) {
-  const visibleMedia = occurrence.media.slice(0, 3);
+function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
+  if (media.length === 0) {
+    return (
+      <p
+        className="
+          mt-[10px]
+          text-[13px]
+          text-[#716B67]
+        "
+      >
+        Nenhuma evidência anexada a esta ocorrência.
+      </p>
+    );
+  }
 
   return (
     <div className="mt-[10px]">
-      {visibleMedia.length > 0 ? (
-        <div
-          className="
-            flex
-            flex-wrap
-            gap-2
-          "
-        >
-          {visibleMedia.map((media) => (
-            <div
-              key={media.id}
-              aria-label={`Evidência ${media.type}`}
+      <div
+        className="
+          flex
+          flex-wrap
+          gap-2
+        "
+      >
+        {media.slice(0, 3).map((item, index) => {
+          const alt = `Evidência ${index + 1} da ocorrência ${protocol.toUpperCase()}`;
+
+          if (!item.signedUrl) {
+            return (
+              <div
+                key={item.id}
+                title="Não foi possível carregar esta evidência."
+              >
+                <MediaThumbnail alt={alt} mimeType={item.mimeType} />
+              </div>
+            );
+          }
+
+          return (
+            <a
+              key={item.id}
+              href={item.signedUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Abrir evidência"
+              aria-label={`Abrir ${alt}`}
               className="
-                  flex
-                  h-[72px]
-                  w-[92px]
-                  items-center
-                  justify-center
-                  rounded-[10px]
-                  border
-                  border-[#E9E0D4]
-                  bg-[#F4EFE6]
-                "
+                rounded-[10px]
+                transition
+                hover:opacity-90
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
             >
-              <ImageIcon size={20} strokeWidth={1.8} aria-hidden="true" />
-            </div>
-          ))}
-        </div>
-      ) : null}
+              <MediaThumbnail
+                alt={alt}
+                src={item.signedUrl}
+                mimeType={item.mimeType}
+              />
+            </a>
+          );
+        })}
+      </div>
 
       <p
         className="
           mt-[10px]
           text-[13px]
-          leading-[1.4]
           text-[#716B67]
         "
       >
-        {visibleMedia.length > 0
-          ? `${occurrence.media.length} ${
-              occurrence.media.length === 1
-                ? "evidência registrada"
-                : "evidências registradas"
-            } nesta ocorrência.`
-          : "Nenhuma evidência anexada a esta ocorrência."}
+        {media.length}{" "}
+        {media.length === 1 ? "evidência registrada" : "evidências registradas"}{" "}
+        nesta ocorrência.
       </p>
     </div>
   );
@@ -445,9 +448,17 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
 
   const priorityLabel = getOccurrencePriorityLabel(occurrence.priority);
 
+  const canManagePriority = canManageOccurrencePriority(occurrence.status);
+
+  const canAssignAgent = canAssignOccurrenceAgent(
+    occurrence.status,
+    occurrence.priority,
+  );
+
+  const needsTriage = needsOccurrenceTriage(occurrence.status);
+
   return (
     <aside
-      aria-labelledby="operational-details-title"
       className="
         min-w-0
         rounded-[16px]
@@ -460,16 +471,7 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
         lg:overflow-y-auto
       "
     >
-      <h2
-        id="operational-details-title"
-        className="
-          text-[20px]
-          font-bold
-          leading-[1.3]
-        "
-      >
-        Detalhes operacionais
-      </h2>
+      <h2 className="text-[20px] font-bold">Detalhes operacionais</h2>
 
       <div
         className="
@@ -518,12 +520,10 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
             ) : (
               <span
                 className="
-                  flex
-                  h-8
-                  items-center
                   rounded-full
                   bg-[#FAEBC8]
                   px-3
+                  py-2
                   text-[12px]
                   font-semibold
                 "
@@ -547,7 +547,7 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
           label="Última atualização"
           value={
             <span className="font-semibold">
-              {formatElapsedTime(occurrence.updatedAt)}
+              {formatRelativeElapsedTime(occurrence.updatedAt)}
             </span>
           }
         />
@@ -572,47 +572,79 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
           gap-[10px]
         "
       >
-        <button
-          type="button"
-          disabled
-          title="Edição ainda não disponível nesta entrega"
-          className="
-            flex
-            h-11
-            w-full
-            cursor-default
-            items-center
-            justify-center
-            rounded-[12px]
-            border
-            border-[#E9E0D4]
-            bg-white
-            text-[13px]
-            font-bold
-            text-[#171717]
-          "
-        >
-          Editar ocorrência
-        </button>
+        {needsTriage ? (
+          <Link
+            href={getOccurrenceTriagePath(occurrence.id)}
+            className="
+              flex
+              h-11
+              items-center
+              justify-center
+              rounded-[12px]
+              bg-[#C94F32]
+              text-[13px]
+              font-bold
+              text-white
+            "
+          >
+            Revisar ocorrência
+          </Link>
+        ) : null}
+
+        {canManagePriority ? (
+          <Link
+            href={getOccurrencePriorityPath(occurrence.id)}
+            className="
+              flex
+              h-11
+              items-center
+              justify-center
+              rounded-[12px]
+              border
+              border-[#E9E0D4]
+              bg-white
+              text-[13px]
+              font-bold
+            "
+          >
+            {occurrence.priority ? "Alterar prioridade" : "Definir prioridade"}
+          </Link>
+        ) : null}
+
+        {canAssignAgent ? (
+          <Link
+            href={getOccurrenceAssignmentPath(occurrence.id)}
+            className="
+              flex
+              h-11
+              items-center
+              justify-center
+              rounded-[12px]
+              bg-[#C94F32]
+              text-[13px]
+              font-bold
+              text-white
+            "
+          >
+            Atribuir agente
+          </Link>
+        ) : null}
 
         <button
           type="button"
           disabled
-          title="Arquivamento ainda não disponível nesta entrega"
           className="
             flex
             h-11
-            w-full
-            cursor-default
             items-center
             justify-center
             rounded-[12px]
             border
             border-[#E9E0D4]
-            bg-white
             text-[13px]
             font-bold
-            text-[#171717]
+            text-[#716B67]
+            opacity-60
           "
         >
           Arquivar ocorrência
@@ -638,26 +670,9 @@ function OperationalRow({ label, value }: OperationalRowProps) {
         gap-4
       "
     >
-      <span
-        className="
-          text-[13px]
-          text-[#716B67]
-        "
-      >
-        {label}
-      </span>
+      <span className="text-[13px] text-[#716B67]">{label}</span>
 
-      <div
-        className="
-          flex
-          shrink-0
-          items-center
-          justify-end
-          text-[13px]
-        "
-      >
-        {value}
-      </div>
+      <div className="text-[13px]">{value}</div>
     </div>
   );
 }

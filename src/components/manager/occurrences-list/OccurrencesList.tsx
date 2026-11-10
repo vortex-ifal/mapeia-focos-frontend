@@ -1,7 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useDeferredValue, useMemo, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import { DesktopNavigationRail } from "@/components/manager/navigation/DesktopNavigationRail";
 import { ManagerHomeShortcut } from "@/components/manager/navigation/ManagerHomeShortcut";
@@ -15,15 +21,34 @@ import {
 } from "@/controllers/manager/occurrences-list.controller";
 import { getAllOccurrences } from "@/services/api/occurrences-list.service";
 import type { OperationalPriority } from "@/types/operations";
+import {
+  getOccurrencesListServerSnapshot,
+  getOccurrencesListStateSnapshot,
+  parseOccurrencesListNavigationState,
+  subscribeToOccurrencesListState,
+  updateOccurrencesListNavigationState,
+} from "@/utils/occurrences-list-state";
 
 export function OccurrencesList() {
-  const [query, setQuery] = useState("");
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-  const [statusKey, setStatusKey] = useState<string | null>(null);
+  const restoredScrollRef = useRef(false);
 
-  const [region, setRegion] = useState<string | null>(null);
+  const stateSnapshot = useSyncExternalStore(
+    subscribeToOccurrencesListState,
+    getOccurrencesListStateSnapshot,
+    getOccurrencesListServerSnapshot,
+  );
 
-  const [priority, setPriority] = useState<OperationalPriority | null>(null);
+  const navigationState = useMemo(
+    () => parseOccurrencesListNavigationState(stateSnapshot),
+    [stateSnapshot],
+  );
+
+  const query = navigationState.query;
+  const statusKey = navigationState.statusKey;
+  const region = navigationState.region;
+  const priority = navigationState.priority;
 
   const deferredQuery = useDeferredValue(query);
 
@@ -55,6 +80,39 @@ export function OccurrencesList() {
     [occurrences, deferredQuery, statusKey, region, priority],
   );
 
+  /*
+   * Restore the internal scroll after the cards
+   * have been rendered.
+   */
+  useEffect(() => {
+    if (
+      occurrencesQuery.isPending ||
+      occurrencesQuery.isError ||
+      restoredScrollRef.current
+    ) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      if (!listRef.current) {
+        return;
+      }
+
+      listRef.current.scrollTop = navigationState.scrollTop;
+
+      restoredScrollRef.current = true;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [
+    filteredOccurrences.length,
+    navigationState.scrollTop,
+    occurrencesQuery.isError,
+    occurrencesQuery.isPending,
+  ]);
+
   const filtersActive =
     Boolean(deferredQuery.trim()) ||
     Boolean(statusKey) ||
@@ -65,6 +123,42 @@ export function OccurrencesList() {
     occurrencesQuery.error instanceof Error
       ? occurrencesQuery.error.message
       : "Não foi possível carregar as ocorrências.";
+
+  function handleQueryChange(value: string) {
+    restoredScrollRef.current = false;
+
+    updateOccurrencesListNavigationState({
+      query: value,
+      scrollTop: 0,
+    });
+  }
+
+  function handleStatusChange(value: string | null) {
+    restoredScrollRef.current = false;
+
+    updateOccurrencesListNavigationState({
+      statusKey: value,
+      scrollTop: 0,
+    });
+  }
+
+  function handleRegionChange(value: string | null) {
+    restoredScrollRef.current = false;
+
+    updateOccurrencesListNavigationState({
+      region: value,
+      scrollTop: 0,
+    });
+  }
+
+  function handlePriorityChange(value: OperationalPriority | null) {
+    restoredScrollRef.current = false;
+
+    updateOccurrencesListNavigationState({
+      priority: value,
+      scrollTop: 0,
+    });
+  }
 
   return (
     <main
@@ -150,13 +244,19 @@ export function OccurrencesList() {
               region={region}
               priority={priority}
               regions={regions}
-              onQueryChange={setQuery}
-              onStatusChange={setStatusKey}
-              onRegionChange={setRegion}
-              onPriorityChange={setPriority}
+              onQueryChange={handleQueryChange}
+              onStatusChange={handleStatusChange}
+              onRegionChange={handleRegionChange}
+              onPriorityChange={handlePriorityChange}
             />
 
             <div
+              ref={listRef}
+              onScroll={(event) => {
+                updateOccurrencesListNavigationState({
+                  scrollTop: event.currentTarget.scrollTop,
+                });
+              }}
               className="
                 mt-[10px]
                 flex
