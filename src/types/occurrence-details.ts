@@ -9,6 +9,8 @@ export type OccurrenceDetailMedia = {
   fileSizeBytes: number;
   type: string;
   uploadedAt: string;
+  signedUrl: string | null;
+  signedUrlExpiresAt: string | null;
 };
 
 export type OccurrenceDetail = {
