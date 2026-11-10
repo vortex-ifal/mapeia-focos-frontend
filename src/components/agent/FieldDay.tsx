@@ -9,13 +9,14 @@ import clsx from "clsx";
 import {
   formatCardNumber,
   formatWaitingTime,
+  getPriorityPresentation,
   getSavedOfflineSurveySnapshot,
   handleResumeSavedSurvey,
   handleViewDayPriorities,
-  mapOccurrencesToFieldDayData,
+  mapDashboardResponseToFieldDayData,
   subscribeToSavedOfflineSurvey,
 } from "@/controllers/agent/field-day.controller";
-import { getFieldDayOccurrences } from "@/services/api/field-day.service";
+import { getAgentDashboard } from "@/services/api/field-day.service";
 
 export function FieldDay() {
   const surveySnapshot = useSyncExternalStore(
@@ -26,19 +27,23 @@ export function FieldDay() {
 
   const hasSavedSurvey = surveySnapshot === "saved";
 
-  const occurrencesQuery = useQuery({
-    queryKey: ["agent", "field-day", "occurrences"],
-    queryFn: getFieldDayOccurrences,
+  const dashboardQuery = useQuery({
+    queryKey: ["agent", "dashboard"],
+    queryFn: getAgentDashboard,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
   });
 
   const data = useMemo(() => {
-    return mapOccurrencesToFieldDayData(occurrencesQuery.data);
-  }, [occurrencesQuery.data]);
+    return mapDashboardResponseToFieldDayData(dashboardQuery.data);
+  }, [dashboardQuery.data]);
 
   const { stats, nextPriority } = data;
+
+  const priorityPresentation = useMemo(() => {
+    return getPriorityPresentation(nextPriority?.priority ?? null);
+  }, [nextPriority?.priority]);
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
@@ -80,12 +85,12 @@ export function FieldDay() {
         <section className="mt-6">
           <h1
             className="
-              text-[28px]
-              font-extrabold
+              text-[30px]
+              font-bold
               leading-[1.25]
               tracking-[-0.6px]
               text-[#171717]
-              max-[360px]:text-[25px]
+              max-[360px]:text-[26px]
             "
           >
             Seu dia em campo
@@ -103,7 +108,7 @@ export function FieldDay() {
           </p>
         </section>
 
-        {occurrencesQuery.isError ? (
+        {dashboardQuery.isError ? (
           <div
             role="alert"
             className="
@@ -117,14 +122,14 @@ export function FieldDay() {
             "
           >
             <p className="text-[12px] leading-5 text-[#9D352D]">
-              {occurrencesQuery.error instanceof Error
-                ? occurrencesQuery.error.message
+              {dashboardQuery.error instanceof Error
+                ? dashboardQuery.error.message
                 : "Não foi possível carregar as atividades do dia da API."}
             </p>
             <button
               type="button"
               onClick={() => {
-                void occurrencesQuery.refetch();
+                void dashboardQuery.refetch();
               }}
               className="
                 mt-2
@@ -140,7 +145,7 @@ export function FieldDay() {
           </div>
         ) : null}
 
-        {occurrencesQuery.isPending ? (
+        {dashboardQuery.isPending ? (
           <div
             className="
               mt-4
@@ -168,7 +173,7 @@ export function FieldDay() {
               min-h-[88px]
               flex-col
               justify-between
-              rounded-[16px]
+              rounded-[10px]
               border
               border-[#E9E0D4]
               bg-white
@@ -178,14 +183,14 @@ export function FieldDay() {
           >
             <span
               className="
-                text-[26px]
+                text-[23px]
                 font-bold
                 leading-none
                 tracking-tight
                 text-[#171717]
               "
             >
-              {occurrencesQuery.isPending
+              {dashboardQuery.isPending || dashboardQuery.isError
                 ? "—"
                 : formatCardNumber(stats.assignedActivitiesCount)}
             </span>
@@ -207,7 +212,7 @@ export function FieldDay() {
               min-h-[88px]
               flex-col
               justify-between
-              rounded-[16px]
+              rounded-[10px]
               border
               border-[#E9E0D4]
               bg-white
@@ -217,14 +222,14 @@ export function FieldDay() {
           >
             <span
               className="
-                text-[26px]
+                text-[23px]
                 font-bold
                 leading-none
                 tracking-tight
                 text-[#171717]
               "
             >
-              {occurrencesQuery.isPending
+              {dashboardQuery.isPending || dashboardQuery.isError
                 ? "—"
                 : formatCardNumber(stats.highPriorityCount)}
             </span>
@@ -246,7 +251,7 @@ export function FieldDay() {
               min-h-[88px]
               flex-col
               justify-between
-              rounded-[16px]
+              rounded-[10px]
               border
               border-[#E9E0D4]
               bg-white
@@ -256,14 +261,14 @@ export function FieldDay() {
           >
             <span
               className="
-                text-[26px]
+                text-[23px]
                 font-bold
                 leading-none
                 tracking-tight
                 text-[#171717]
               "
             >
-              {occurrencesQuery.isPending
+              {dashboardQuery.isPending || dashboardQuery.isError
                 ? "—"
                 : formatCardNumber(stats.indicatedInspectionsCount)}
             </span>
@@ -297,36 +302,24 @@ export function FieldDay() {
               Próxima prioridade
             </h2>
 
-            {nextPriority ? (
+            {nextPriority && priorityPresentation.label ? (
               <span
-                className="
-                  flex
-                  h-7
-                  items-center
-                  rounded-full
-                  bg-[#FAEBC8]
-                  px-3
-                  text-[12px]
-                  font-semibold
-                  text-[#171717]
-                "
+                className={clsx(
+                  "flex h-7 items-center rounded-full px-3 text-[12px] font-semibold",
+                  priorityPresentation.badgeClassName,
+                )}
               >
-                Prioridade alta
+                {priorityPresentation.label}
               </span>
             ) : null}
           </div>
 
           {nextPriority ? (
             <div
-              className="
-                mt-3
-                rounded-[16px]
-                border-2
-                border-[#C94F32]
-                bg-[#FAEBC8]
-                p-4
-                text-left
-              "
+              className={clsx(
+                "mt-3 rounded-[16px] p-4 text-left",
+                priorityPresentation.cardClassName,
+              )}
             >
               <p
                 className="
@@ -363,7 +356,7 @@ export function FieldDay() {
                 {nextPriority.nextAction}
               </p>
             </div>
-          ) : !occurrencesQuery.isPending ? (
+          ) : !dashboardQuery.isPending && !dashboardQuery.isError ? (
             <div
               className="
                 mt-3
@@ -454,6 +447,9 @@ export function FieldDay() {
             className={clsx(
               `
                 mt-1
+                flex
+                min-h-[44px]
+                items-center
                 self-center
                 border-0
                 bg-transparent
