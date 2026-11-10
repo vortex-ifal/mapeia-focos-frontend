@@ -1,6 +1,8 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
@@ -24,6 +26,7 @@ import type { AssignmentSuccess } from "@/types/assignment";
 
 export function AgentAssignment() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   const occurrenceId = searchParams.get("occurrenceId")?.trim() || null;
 
@@ -44,8 +47,10 @@ export function AgentAssignment() {
   const agentsQuery = useQuery({
     queryKey: ["assignment", "agents"],
     queryFn: getAgentsForAssignment,
+    enabled: Boolean(occurrenceId),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    retry: false,
   });
 
   const occurrence = occurrenceQuery.data
@@ -69,7 +74,7 @@ export function AgentAssignment() {
       assignOccurrenceToAgent(occurrenceId as string, agentId),
 
     onSuccess: () => {
-      if (!selectedAgent) {
+      if (!selectedAgent || !occurrenceId) {
         return;
       }
 
@@ -80,6 +85,29 @@ export function AgentAssignment() {
 
       setConfirmationOpen(false);
 
+      /*
+       * The backend changes the occurrence status to
+       * forwarded_for_inspection during assignment.
+       *
+       * Invalidating the related queries prevents stale data when the
+       * manager returns to the occurrence details or operational center.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: ["manager", "occurrence", occurrenceId],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["assignment", "occurrence", occurrenceId],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["operations", "triage-queue"],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["occurrences"],
+      });
+
       toast.success("Agente atribuído com sucesso.");
     },
   });
@@ -89,8 +117,21 @@ export function AgentAssignment() {
       ? assignmentMutation.error.message
       : null;
 
+  function handleSelectAgent(agentId: string) {
+    if (assignment) {
+      return;
+    }
+
+    setSelectedAgentId(agentId);
+  }
+
   function handleSubmit() {
-    if (!selectedAgent || !assignmentAllowed || assignmentMutation.isPending) {
+    if (
+      !selectedAgent ||
+      !assignmentAllowed ||
+      assignmentMutation.isPending ||
+      assignment
+    ) {
       return;
     }
 
@@ -98,13 +139,26 @@ export function AgentAssignment() {
   }
 
   function handleConfirm() {
-    if (!selectedAgent || !occurrenceId) {
+    if (
+      !selectedAgent ||
+      !occurrenceId ||
+      !assignmentAllowed ||
+      assignmentMutation.isPending
+    ) {
       return;
     }
 
     assignmentMutation.mutate({
       agentId: selectedAgent.id,
     });
+  }
+
+  function handleCancelConfirmation() {
+    if (assignmentMutation.isPending) {
+      return;
+    }
+
+    setConfirmationOpen(false);
   }
 
   if (!occurrenceId) {
@@ -121,16 +175,12 @@ export function AgentAssignment() {
   }
 
   if (occurrenceQuery.isError) {
-    return (
-      <AssignmentPageState
-        message={
-          occurrenceQuery.error instanceof Error
-            ? occurrenceQuery.error.message
-            : "Não foi possível carregar a ocorrência."
-        }
-        error
-      />
-    );
+    const message =
+      occurrenceQuery.error instanceof Error
+        ? occurrenceQuery.error.message
+        : "Não foi possível carregar a ocorrência.";
+
+    return <AssignmentPageState message={message} error />;
   }
 
   if (!occurrence) {
@@ -172,17 +222,52 @@ export function AgentAssignment() {
         >
           <ManagerHomeShortcut className="ml-1" />
 
-          <h1
+          <div
             className="
-              pt-2
-              text-[30px]
-              font-extrabold
-              leading-[1.2]
-              tracking-[-0.6px]
+              flex
+              items-center
+              gap-3
+              pt-1
             "
           >
-            Atribuir agente
-          </h1>
+            <Link
+              href={`/central-operacional/ocorrencias/${encodeURIComponent(
+                occurrenceId,
+              )}`}
+              aria-label="Voltar para detalhes da ocorrência"
+              title="Voltar"
+              className="
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
+                rounded-[10px]
+                text-[#584A57]
+                transition-colors
+                hover:bg-[#F4EFE6]
+                hover:text-[#C94F32]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
+            >
+              <ChevronLeft size={24} strokeWidth={1.8} aria-hidden="true" />
+            </Link>
+
+            <h1
+              className="
+                text-[30px]
+                font-extrabold
+                leading-[1.2]
+                tracking-[-0.6px]
+              "
+            >
+              Atribuir agente
+            </h1>
+          </div>
         </header>
 
         <div
@@ -204,7 +289,9 @@ export function AgentAssignment() {
               min-w-0
               grid-cols-1
               gap-4
+
               md:grid-cols-[minmax(0,1fr)_minmax(360px,1fr)]
+
               lg:h-[calc(100dvh-132px)]
               lg:min-h-[620px]
               lg:max-h-[768px]
@@ -232,7 +319,7 @@ export function AgentAssignment() {
                     ? "A ocorrência precisa estar validada e possuir prioridade antes da atribuição."
                     : mutationError
               }
-              onSelect={setSelectedAgentId}
+              onSelect={handleSelectAgent}
               onSubmit={handleSubmit}
               onRetry={() => {
                 void agentsQuery.refetch();
@@ -246,7 +333,7 @@ export function AgentAssignment() {
         <AssignmentConfirmationDialog
           agent={selectedAgent}
           saving={assignmentMutation.isPending}
-          onCancel={() => setConfirmationOpen(false)}
+          onCancel={handleCancelConfirmation}
           onConfirm={handleConfirm}
         />
       ) : null}
@@ -287,6 +374,7 @@ function AssignmentPageState({
             className="
               text-[30px]
               font-extrabold
+              tracking-[-0.6px]
             "
           >
             Atribuir agente
