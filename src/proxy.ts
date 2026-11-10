@@ -11,7 +11,6 @@ import {
 const CITIZEN_ROUTES = [
   CITIZEN_HOME_ROUTE,
   "/",
-  "/nova-ocorrencia",
   "/acompanhar-referencia",
 ];
 
