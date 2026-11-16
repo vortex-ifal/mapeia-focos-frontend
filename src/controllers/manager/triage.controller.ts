@@ -41,7 +41,13 @@ export function mapOccurrenceToTriage(
     waitingMinutes: calculateWaitingMinutes(occurrence.createdAt),
     status: occurrence.status,
     description: occurrence.description,
-    evidence: [],
+
+    evidence: occurrence.media.map((media, index) => ({
+      id: media.id,
+      alt: `Evidência ${index + 1} da ocorrência ${occurrence.protocol.toUpperCase()}`,
+      url: media.signedUrl,
+      mimeType: media.mimeType,
+    })),
   };
 }
 

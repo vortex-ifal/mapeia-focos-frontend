@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { buildApiUrl } from "@/services/api/api.config";
+import { resolveMediaSignedUrls } from "@/services/api/media.service";
 import type { OccurrenceDetail } from "@/types/occurrence-details";
 
 const operationalStatusSchema = z.object({
@@ -89,5 +90,10 @@ export async function getOccurrenceDetails(
     );
   }
 
-  return parsed.data;
+  const resolvedMedia = await resolveMediaSignedUrls(parsed.data.media);
+
+  return {
+    ...parsed.data,
+    media: resolvedMedia,
+  };
 }

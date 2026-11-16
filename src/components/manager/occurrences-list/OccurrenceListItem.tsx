@@ -1,7 +1,7 @@
 import Link from "next/link";
 
+import { formatElapsedDuration } from "@/utils/occurrence.utils";
 import {
-  formatElapsedTime,
   getOccurrenceDetailsPath,
 } from "@/controllers/manager/occurrences-list.controller";
 import type { OccurrenceListItem as OccurrenceListItemType } from "@/types/occurrences-list";
@@ -63,7 +63,7 @@ export function OccurrenceListItem({ occurrence }: OccurrenceListItemProps) {
           text-[#716B67]
         "
       >
-        {formatElapsedTime(occurrence.elapsedMinutes)}
+        {formatElapsedDuration(occurrence.elapsedMinutes)}
         {" · "}
         <span className="underline underline-offset-2">abrir detalhes</span>
       </p>

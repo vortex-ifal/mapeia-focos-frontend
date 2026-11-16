@@ -2,6 +2,10 @@ import type {
   OperationalPriority,
   OperationalStatus,
 } from "@/types/operations";
+import {
+  formatRelativeElapsedTime,
+  getOccurrenceRegion,
+} from "@/utils/occurrence.utils";
 
 export type ProgressItem = {
   label: string;
@@ -37,67 +41,6 @@ export function getOccurrencePriorityLabel(
   return priorityLabels[priority];
 }
 
-export function calculateElapsedMinutes(value: string): number {
-  const timestamp = new Date(value).getTime();
-
-  if (Number.isNaN(timestamp)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
-}
-
-export function formatElapsedTime(value: string): string {
-  const minutes = calculateElapsedMinutes(value);
-
-  if (minutes < 60) {
-    return `há ${minutes} min`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-
-  const remainingMinutes = minutes % 60;
-
-  if (hours < 24) {
-    if (remainingMinutes === 0) {
-      return `há ${hours} h`;
-    }
-
-    return `há ${hours} h ${remainingMinutes} min`;
-  }
-
-  const days = Math.floor(hours / 24);
-
-  const remainingHours = hours % 24;
-
-  if (remainingHours === 0) {
-    return `há ${days} d`;
-  }
-
-  return `há ${days} d ${remainingHours} h`;
-}
-
-export function getOccurrenceRegion(address: string): string {
-  const parts = address
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) {
-    return "Região não informada";
-  }
-
-  const possibleRegion = parts.find(
-    (part, index) =>
-      index > 0 &&
-      !/^\d+$/.test(part) &&
-      !/^arapiraca$/i.test(part) &&
-      !/^alagoas$/i.test(part),
-  );
-
-  return possibleRegion ?? "Região não informada";
-}
-
 export function getLocationContext(
   address: string,
   latitude: number | null,
@@ -112,6 +55,41 @@ export function getLocationContext(
   return region;
 }
 
+export function canManageOccurrencePriority(
+  status: OperationalStatus,
+): boolean {
+  return status.key === "accepted";
+}
+
+export function canAssignOccurrenceAgent(
+  status: OperationalStatus,
+  priority: OperationalPriority | null,
+): boolean {
+  return status.key === "accepted" && priority !== null;
+}
+
+export function needsOccurrenceTriage(status: OperationalStatus): boolean {
+  return status.key === "registered" || status.key === "under_review";
+}
+
+export function getOccurrencePriorityPath(occurrenceId: string): string {
+  return `/central-operacional/prioridade?occurrenceId=${encodeURIComponent(
+    occurrenceId,
+  )}`;
+}
+
+export function getOccurrenceAssignmentPath(occurrenceId: string): string {
+  return `/central-operacional/atribuicao?occurrenceId=${encodeURIComponent(
+    occurrenceId,
+  )}`;
+}
+
+export function getOccurrenceTriagePath(occurrenceId: string): string {
+  return `/central-operacional/triagem?occurrenceId=${encodeURIComponent(
+    occurrenceId,
+  )}`;
+}
+
 export function getOccurrenceProgress(
   status: OperationalStatus,
   priority: OperationalPriority | null,
@@ -119,14 +97,14 @@ export function getOccurrenceProgress(
   updatedAt: string,
 ): ProgressItem[] {
   const registered: ProgressItem = {
-    label: `Registrada · ${formatElapsedTime(createdAt)}`,
+    label: `Registrada · ${formatRelativeElapsedTime(createdAt)}`,
     completed: true,
   };
 
   const currentStatus: ProgressItem = {
     label: `${getOccurrenceStatusLabel(
       status,
-    )} · atualizado ${formatElapsedTime(updatedAt)}`,
+    )} · atualizado ${formatRelativeElapsedTime(updatedAt)}`,
     completed: true,
   };
 

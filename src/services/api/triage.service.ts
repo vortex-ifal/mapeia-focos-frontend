@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { buildApiUrl } from "@/services/api/api.config";
+import { resolveMediaSignedUrls } from "@/services/api/media.service";
 import type {
   ModerationStatusKey,
   OccurrenceListItemResponse,
@@ -108,7 +109,12 @@ export async function getOccurrenceForTriage(
     );
   }
 
-  return parsedResponse.data;
+  const resolvedMedia = await resolveMediaSignedUrls(parsedResponse.data.media);
+
+  return {
+    ...parsedResponse.data,
+    media: resolvedMedia,
+  };
 }
 
 export async function getTerritorialContext(

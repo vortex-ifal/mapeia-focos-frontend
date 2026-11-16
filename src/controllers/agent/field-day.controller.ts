@@ -1,6 +1,6 @@
 import { toast } from "react-toastify";
 
-import { getOccurrenceRegion } from "@/controllers/manager/occurrences-list.controller";
+import { getOccurrenceRegion } from "@/utils/occurrence.utils";
 import type {
   AgentDashboardApiResponse,
   AgentDashboardNextPriorityResponse,
