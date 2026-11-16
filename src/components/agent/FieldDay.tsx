@@ -12,7 +12,6 @@ import {
   getPriorityPresentation,
   getSavedOfflineSurveySnapshot,
   handleResumeSavedSurvey,
-  handleViewDayPriorities,
   mapDashboardResponseToFieldDayData,
   subscribeToSavedOfflineSurvey,
 } from "@/controllers/agent/field-day.controller";
@@ -70,6 +69,7 @@ export function FieldDay() {
             className="h-auto w-[128px]"
             priority
           />
+
           <span
             className="
               text-[13px]
@@ -126,6 +126,7 @@ export function FieldDay() {
                 ? dashboardQuery.error.message
                 : "Não foi possível carregar as atividades do dia da API."}
             </p>
+
             <button
               type="button"
               onClick={() => {
@@ -194,6 +195,7 @@ export function FieldDay() {
                 ? "—"
                 : formatCardNumber(stats.assignedActivitiesCount)}
             </span>
+
             <span
               className="
                 mt-2
@@ -233,6 +235,7 @@ export function FieldDay() {
                 ? "—"
                 : formatCardNumber(stats.highPriorityCount)}
             </span>
+
             <span
               className="
                 mt-2
@@ -272,6 +275,7 @@ export function FieldDay() {
                 ? "—"
                 : formatCardNumber(stats.indicatedInspectionsCount)}
             </span>
+
             <span
               className="
                 mt-2
@@ -285,10 +289,7 @@ export function FieldDay() {
           </div>
         </section>
 
-        <section
-          aria-labelledby="next-priority-title"
-          className="mt-6"
-        >
+        <section aria-labelledby="next-priority-title" className="mt-6">
           <div className="flex items-center justify-between">
             <h2
               id="next-priority-title"
@@ -352,7 +353,8 @@ export function FieldDay() {
                   text-[#716B67]
                 "
               >
-                {formatWaitingTime(nextPriority.waitingMinutes)} · próxima ação:{" "}
+                {formatWaitingTime(nextPriority.waitingMinutes)}
+                {" · próxima ação: "}
                 {nextPriority.nextAction}
               </p>
             </div>
@@ -379,9 +381,8 @@ export function FieldDay() {
           aria-label="Ações do agente"
           className="mt-6 flex flex-col gap-3"
         >
-          <button
-            type="button"
-            onClick={handleViewDayPriorities}
+          <Link
+            href="/dia-em-campo/prioridades"
             className="
               flex
               h-[52px]
@@ -395,6 +396,7 @@ export function FieldDay() {
               text-[14px]
               font-bold
               text-white
+              no-underline
               transition
               duration-150
               hover:bg-[#B9472E]
@@ -406,7 +408,7 @@ export function FieldDay() {
             "
           >
             Ver prioridades do dia
-          </button>
+          </Link>
 
           <Link
             href="/nova-ocorrencia"
