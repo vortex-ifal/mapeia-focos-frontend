@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { buildApiUrl } from "@/services/api/api.config";
-import { resolveMediaSignedUrls } from "@/services/api/media.service";
 import type { OccurrenceDetail } from "@/types/occurrence-details";
 
 const operationalStatusSchema = z.object({
@@ -13,11 +12,16 @@ const operationalPrioritySchema = z.enum(["low", "medium", "high"]);
 
 const mediaSchema = z.object({
   id: z.string(),
-  mimeType: z.string(),
-  fileSizeBytes: z.number(),
+  url: z.string(),
   type: z.string(),
-  uploadedAt: z.string(),
 });
+
+const assignedAgentSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+  })
+  .nullable();
 
 const occurrenceDetailSchema = z.object({
   id: z.string(),
@@ -31,6 +35,7 @@ const occurrenceDetailSchema = z.object({
   updatedAt: z.string(),
   status: operationalStatusSchema,
   priority: operationalPrioritySchema.nullable(),
+  assignedAgent: assignedAgentSchema,
   media: z.array(mediaSchema),
 });
 
@@ -90,10 +95,5 @@ export async function getOccurrenceDetails(
     );
   }
 
-  const resolvedMedia = await resolveMediaSignedUrls(parsed.data.media);
-
-  return {
-    ...parsed.data,
-    media: resolvedMedia,
-  };
+  return parsed.data;
 }

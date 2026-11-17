@@ -5,12 +5,13 @@ import type {
 
 export type OccurrenceDetailMedia = {
   id: string;
-  mimeType: string;
-  fileSizeBytes: number;
+  url: string;
   type: string;
-  uploadedAt: string;
-  signedUrl: string | null;
-  signedUrlExpiresAt: string | null;
+};
+
+export type OccurrenceDetailAssignedAgent = {
+  id: string;
+  name: string;
 };
 
 export type OccurrenceDetail = {
@@ -25,5 +26,6 @@ export type OccurrenceDetail = {
   updatedAt: string;
   status: OperationalStatus;
   priority: OperationalPriority | null;
+  assignedAgent: OccurrenceDetailAssignedAgent | null;
   media: OccurrenceDetailMedia[];
 };

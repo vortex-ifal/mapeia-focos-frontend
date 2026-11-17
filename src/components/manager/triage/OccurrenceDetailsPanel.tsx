@@ -152,7 +152,7 @@ function EvidenceSection({ evidence }: EvidenceSectionProps) {
         if (!item.url) {
           return (
             <div key={item.id} title="Não foi possível carregar esta mídia.">
-              <MediaThumbnail alt={item.alt} mimeType={item.mimeType} />
+              <MediaThumbnail alt={item.alt} type={item.type} />
             </div>
           );
         }
@@ -178,7 +178,7 @@ function EvidenceSection({ evidence }: EvidenceSectionProps) {
             <MediaThumbnail
               alt={item.alt}
               src={item.url}
-              mimeType={item.mimeType}
+              type={item.type}
             />
           </a>
         );
