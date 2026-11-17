@@ -11,17 +11,13 @@ export type TriageEvidence = {
   id: string;
   alt: string;
   url: string | null;
-  mimeType: string;
+  type: string;
 };
 
 export type TriageMediaResponse = {
   id: string;
-  mimeType: string;
-  fileSizeBytes: number;
+  url: string;
   type: string;
-  uploadedAt: string;
-  signedUrl: string | null;
-  signedUrlExpiresAt: string | null;
 };
 
 export type OccurrenceListItemResponse = {

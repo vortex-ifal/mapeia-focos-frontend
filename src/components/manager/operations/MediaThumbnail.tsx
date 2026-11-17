@@ -6,6 +6,7 @@ import clsx from "clsx";
 type MediaThumbnailProps = {
   alt: string;
   src?: string | null;
+  type?: string | null;
   mimeType?: string | null;
   className?: string;
 };
@@ -13,10 +14,19 @@ type MediaThumbnailProps = {
 export function MediaThumbnail({
   alt,
   src = null,
+  type = null,
   mimeType = null,
   className,
 }: MediaThumbnailProps) {
-  const isImage = Boolean(src) && Boolean(mimeType?.startsWith("image/"));
+  const isImage =
+    Boolean(src) &&
+    type !== "video" &&
+    (type === null ||
+      type === undefined ||
+      type === "photo" ||
+      type === "image" ||
+      Boolean(type?.startsWith("image")) ||
+      Boolean(mimeType?.startsWith("image")));
 
   return (
     <div

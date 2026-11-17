@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { buildApiUrl } from "@/services/api/api.config";
-import { resolveMediaSignedUrls } from "@/services/api/media.service";
 import type {
   ModerationStatusKey,
   OccurrenceListItemResponse,
@@ -17,10 +16,8 @@ const operationalPrioritySchema = z.enum(["low", "medium", "high"]);
 
 const mediaSchema = z.object({
   id: z.string(),
-  mimeType: z.string(),
-  fileSizeBytes: z.number(),
+  url: z.string(),
   type: z.string(),
-  uploadedAt: z.string(),
 });
 
 const occurrenceDetailSchema = z.object({
@@ -109,12 +106,7 @@ export async function getOccurrenceForTriage(
     );
   }
 
-  const resolvedMedia = await resolveMediaSignedUrls(parsedResponse.data.media);
-
-  return {
-    ...parsedResponse.data,
-    media: resolvedMedia,
-  };
+  return parsedResponse.data;
 }
 
 export async function getTerritorialContext(

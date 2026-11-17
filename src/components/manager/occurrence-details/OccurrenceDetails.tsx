@@ -385,13 +385,13 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
         {media.slice(0, 3).map((item, index) => {
           const alt = `Evidência ${index + 1} da ocorrência ${protocol.toUpperCase()}`;
 
-          if (!item.signedUrl) {
+          if (!item.url) {
             return (
               <div
                 key={item.id}
                 title="Não foi possível carregar esta evidência."
               >
-                <MediaThumbnail alt={alt} mimeType={item.mimeType} />
+                <MediaThumbnail alt={alt} type={item.type} />
               </div>
             );
           }
@@ -399,7 +399,7 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
           return (
             <a
               key={item.id}
-              href={item.signedUrl}
+              href={item.url}
               target="_blank"
               rel="noreferrer"
               title="Abrir evidência"
@@ -416,8 +416,8 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
             >
               <MediaThumbnail
                 alt={alt}
-                src={item.signedUrl}
-                mimeType={item.mimeType}
+                src={item.url}
+                type={item.type}
               />
             </a>
           );
@@ -538,7 +538,17 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
 
         <OperationalRow
           label="Responsável"
-          value={<span className="font-semibold">Não atribuído</span>}
+          value={
+            occurrence.assignedAgent ? (
+              <span className="font-semibold text-[#171717]">
+                {occurrence.assignedAgent.name}
+              </span>
+            ) : (
+              <span className="font-semibold text-[#716B67]">
+                Não atribuído
+              </span>
+            )
+          }
         />
 
         <OperationalDivider />
