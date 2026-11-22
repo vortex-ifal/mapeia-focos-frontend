@@ -22,6 +22,7 @@ export const MANAGER_HOME_ROUTE = "/central-operacional";
 export const LOGIN_ROUTE = "/entrar";
 
 export const AUTH_USER_KEY = "mapeia-auth-user";
+export const AUTH_TOKEN_KEY = "mapeia-auth-token";
 export const AUTH_ROLE_COOKIE = "mapeia_user_role";
 export const AUTH_EVENT = "mapeia-auth-change";
 
@@ -33,6 +34,7 @@ export const MOCK_USERS: Record<string, AuthenticatedUser> = {
     role: "citizen",
     perfil: "Cidadão",
   },
+
   [MOCK_AGENT_CREDENTIALS.email]: {
     id: "usr-agent-1",
     name: "Agente de Endemias",
@@ -40,6 +42,7 @@ export const MOCK_USERS: Record<string, AuthenticatedUser> = {
     role: "agent",
     perfil: "Agente",
   },
+
   [MOCK_MANAGER_CREDENTIALS.email]: {
     id: "usr-manager-1",
     name: "Gestor Operacional",
@@ -84,9 +87,7 @@ export function validateCitizenCredentials(
   );
 }
 
-export function validateAgentCredentials(
-  credentials: LoginFormData,
-): boolean {
+export function validateAgentCredentials(credentials: LoginFormData): boolean {
   return (
     normalizeEmail(credentials.email) === MOCK_AGENT_CREDENTIALS.email &&
     credentials.password === MOCK_AGENT_CREDENTIALS.password
@@ -147,7 +148,9 @@ export function saveAuthSession(user: AuthenticatedUser): void {
   }
 
   sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+
   document.cookie = `${AUTH_ROLE_COOKIE}=${user.role}; path=/; SameSite=Lax`;
+
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
@@ -157,6 +160,7 @@ export function getAuthSession(): AuthenticatedUser | null {
   }
 
   const stored = sessionStorage.getItem(AUTH_USER_KEY);
+
   if (!stored) {
     return null;
   }
@@ -181,8 +185,24 @@ export function clearAuthSession(): void {
     return;
   }
 
+  /*
+   * Remove a sessão atual e também qualquer
+   * credencial persistida pelo fluxo JWT real.
+   *
+   * AUTH_TOKEN_KEY ainda não é utilizado pela
+   * autenticação mockada, mas já fica centralizado
+   * para a integração da autenticação real.
+   */
   sessionStorage.removeItem(AUTH_USER_KEY);
+
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+
+  localStorage.removeItem(AUTH_USER_KEY);
+
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+
   document.cookie = `${AUTH_ROLE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
@@ -192,7 +212,12 @@ export function subscribeToAuthSession(callback: () => void): () => void {
   }
 
   window.addEventListener(AUTH_EVENT, callback);
+
+  window.addEventListener("storage", callback);
+
   return () => {
     window.removeEventListener(AUTH_EVENT, callback);
+
+    window.removeEventListener("storage", callback);
   };
 }

@@ -1,11 +1,12 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
-import { useQuery } from "@tanstack/react-query";
-import clsx from "clsx";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import {
   formatCardNumber,
   formatWaitingTime,
@@ -60,26 +61,45 @@ export function FieldDay() {
           max-[360px]:px-4
         "
       >
-        <header className="flex items-center gap-2">
-          <Image
-            src="/brand/logo-horizontal.svg"
-            alt="Mapeia Focos"
-            width={128}
-            height={30}
-            className="h-auto w-[128px]"
-            priority
-          />
-
-          <span
+        <header
+          className="
+            flex
+            items-center
+            justify-between
+            gap-3
+          "
+        >
+          <div
             className="
-              text-[13px]
-              font-bold
-              tracking-wider
-              text-[#C94F32]
+              flex
+              min-w-0
+              items-center
+              gap-2
             "
           >
-            / AGENTE
-          </span>
+            <Image
+              src="/brand/logo-horizontal.svg"
+              alt="Mapeia Focos"
+              width={128}
+              height={30}
+              className="h-auto w-[128px]"
+              priority
+            />
+
+            <span
+              className="
+                whitespace-nowrap
+                text-[13px]
+                font-bold
+                tracking-wider
+                text-[#C94F32]
+              "
+            >
+              / AGENTE
+            </span>
+          </div>
+
+          <LogoutButton hasUnsavedDraft={hasSavedSurvey} />
         </header>
 
         <section className="mt-6">
