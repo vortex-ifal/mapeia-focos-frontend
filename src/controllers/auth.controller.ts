@@ -154,14 +154,9 @@ export async function registerCitizen(
 
     if (!loginResult.success || !loginResult.user) {
       return {
-        success: true,
-        user: {
-          id: "",
-          name: effectiveName,
-          email: payload.email,
-          role: "citizen",
-          perfil: "Cidadão",
-        },
+        success: false,
+        error:
+          "Conta criada com sucesso, mas o login automático falhou. Por favor, acesse a tela de login.",
       };
     }
 
