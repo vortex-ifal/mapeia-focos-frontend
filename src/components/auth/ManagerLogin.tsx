@@ -9,10 +9,8 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
 import {
-  MOCK_MANAGER_CREDENTIALS,
-  MOCK_USERS,
+  authenticateUser,
   saveAuthSession,
-  validateManagerCredentials,
 } from "@/controllers/auth.controller";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
 
@@ -37,22 +35,27 @@ export function ManagerLogin() {
     },
   });
 
-  function onSubmit(data: LoginFormData) {
+  async function onSubmit(data: LoginFormData) {
     setAuthenticationError(null);
 
-    // TODO: Replace mocked authentication with the authentication API.
-    const isAuthenticated = validateManagerCredentials(data);
+    const authResult = await authenticateUser(data);
 
-    if (!isAuthenticated) {
+    if (!authResult.success || !authResult.user) {
       setAuthenticationError(
-        "Credenciais inválidas. Verifique o e-mail e a senha informados.",
+        authResult.error ??
+          "Credenciais inválidas. Verifique o e-mail e a senha informados.",
       );
-
       return;
     }
 
-    saveAuthSession(MOCK_USERS[MOCK_MANAGER_CREDENTIALS.email]);
+    if (authResult.user.role !== "manager") {
+      setAuthenticationError(
+        "Acesso restrito. Este usuário não possui permissão de gestão.",
+      );
+      return;
+    }
 
+    saveAuthSession(authResult.user);
     router.push("/central-operacional");
   }
 

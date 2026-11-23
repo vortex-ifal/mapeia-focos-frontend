@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildApiUrl } from "@/services/api/api.config";
+import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
 import type { AgentDashboardApiResponse } from "@/types/agent";
 
 const dashboardNextPrioritySchema = z.object({
@@ -74,9 +74,9 @@ export async function getAgentDashboard(): Promise<AgentDashboardApiResponse> {
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {

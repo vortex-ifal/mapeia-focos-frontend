@@ -1,5 +1,8 @@
-import type { InputHTMLAttributes } from "react";
+"use client";
+
+import { useState, type InputHTMLAttributes } from "react";
 import clsx from "clsx";
+import { Eye, EyeOff } from "lucide-react";
 
 type AuthFieldProps = {
   id: string;
@@ -12,9 +15,18 @@ export function AuthField({
   label,
   error,
   className,
+  type,
   ...inputProps
 }: AuthFieldProps) {
   const errorId = `${id}-error`;
+  const isPasswordField = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
+
+  const inputType = isPasswordField
+    ? showPassword
+      ? "text"
+      : "password"
+    : type;
 
   return (
     <div>
@@ -46,24 +58,56 @@ export function AuthField({
           {label}
         </label>
 
-        <input
-          {...inputProps}
-          id={id}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
-          className="
-            min-h-[22px]
-            w-full
-            border-0
-            bg-transparent
-            p-0
-            text-[12px]
-            leading-[18px]
-            text-[#171717]
-            outline-none
-            placeholder:text-[#716B67]
-          "
-        />
+        <div className="flex items-center justify-between gap-2">
+          <input
+            {...inputProps}
+            id={id}
+            type={inputType}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
+            className="
+              min-h-[22px]
+              w-full
+              border-0
+              bg-transparent
+              p-0
+              text-[12px]
+              leading-[18px]
+              text-[#171717]
+              outline-none
+              placeholder:text-[#716B67]
+            "
+          />
+
+          {isPasswordField ? (
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
+              className="
+                flex
+                h-6
+                w-6
+                shrink-0
+                items-center
+                justify-center
+                rounded
+                text-[#716B67]
+                transition-colors
+                hover:text-[#171717]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+              "
+            >
+              {showPassword ? (
+                <EyeOff size={16} aria-hidden="true" />
+              ) : (
+                <Eye size={16} aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
