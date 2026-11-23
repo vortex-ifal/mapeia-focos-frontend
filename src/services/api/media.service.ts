@@ -1,4 +1,4 @@
-import { buildApiUrl } from "./api.config";
+import { buildApiUrl, getAuthHeaders } from "./api.config";
 
 export type UploadMediaResponse = {
   id: string;
@@ -41,6 +41,7 @@ export async function uploadMedia(
 
   const response = await fetch(endpoint, {
     method: "POST",
+    headers: getAuthHeaders(),
     body: formData,
   });
 

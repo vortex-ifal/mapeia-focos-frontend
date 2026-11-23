@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildApiUrl } from "@/services/api/api.config";
+import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
 import type { HeatMapResponse } from "@/types/heatmap";
 
 const heatMapPointSchema = z.object({
@@ -18,9 +18,9 @@ export async function getHeatMapData(): Promise<HeatMapResponse> {
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {
