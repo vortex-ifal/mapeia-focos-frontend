@@ -1,3 +1,5 @@
+import { getAuthToken } from "@/utils/jwt.utils";
+
 /**
  * Constrói o endpoint completo para a API, lidando de forma resiliente com diferentes formatos de NEXT_PUBLIC_API_URL:
  * - Vazio -> "/api/occurrences" (usa rewrite interno do Next.js)
@@ -24,4 +26,17 @@ export function buildApiUrl(path: string): string {
 
   const apiPath = cleanPath.startsWith("api/") ? cleanPath : `api/${cleanPath}`;
   return `${rawBase}/${apiPath}`;
+}
+
+export function getAuthHeaders(
+  extraHeaders: Record<string, string> = {},
+): Record<string, string> {
+  const token = getAuthToken();
+  if (token) {
+    return {
+      ...extraHeaders,
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return extraHeaders;
 }

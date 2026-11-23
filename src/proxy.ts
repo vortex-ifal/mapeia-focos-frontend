@@ -6,12 +6,15 @@ import {
   AUTH_ROLE_COOKIE,
   CITIZEN_HOME_ROUTE,
   LOGIN_ROUTE,
+  REGISTER_ROUTE,
 } from "./controllers/auth.controller";
 
 const CITIZEN_ROUTES = [
   CITIZEN_HOME_ROUTE,
   "/",
   "/acompanhar-referencia",
+  "/nova-ocorrencia",
+  REGISTER_ROUTE,
 ];
 
 const AGENT_ROUTES = [AGENT_FIELD_DAY_ROUTE, "/agente"];

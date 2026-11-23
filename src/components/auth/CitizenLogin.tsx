@@ -35,11 +35,10 @@ export function CitizenLogin() {
     },
   });
 
-  function onSubmit(data: LoginFormData) {
+  async function onSubmit(data: LoginFormData) {
     setAuthenticationError(null);
 
-    // TODO: Replace mocked authentication with the authentication API.
-    const authResult = authenticateUser(data);
+    const authResult = await authenticateUser(data);
 
     if (!authResult.success || !authResult.user) {
       setAuthenticationError(
@@ -210,7 +209,7 @@ export function CitizenLogin() {
             </Button>
 
             <Button
-              type="button"
+              href="/criar-conta"
               variant="secondary"
               className="
                 w-full

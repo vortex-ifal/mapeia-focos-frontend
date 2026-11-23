@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { TriageQueueResponse } from "@/types/operations";
 
-import { buildApiUrl } from "./api.config";
+import { buildApiUrl, getAuthHeaders } from "./api.config";
 
 const operationalStatusSchema = z.object({
   key: z.string(),
@@ -49,9 +49,9 @@ export async function getTriageQueue({
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {

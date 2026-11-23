@@ -5,7 +5,7 @@ import type {
   OccurrenceStatusResponse,
 } from "@/types/occurrence";
 
-import { buildApiUrl } from "./api.config";
+import { buildApiUrl, getAuthHeaders } from "./api.config";
 
 export class OccurrenceNotFoundError extends Error {
   readonly status = 404;
@@ -53,9 +53,9 @@ export async function createOccurrence(
 
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: {
+    headers: getAuthHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(payload),
   });
 

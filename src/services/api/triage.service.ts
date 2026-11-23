@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildApiUrl } from "@/services/api/api.config";
+import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
 import type {
   ModerationStatusKey,
   OccurrenceListItemResponse,
@@ -76,9 +76,9 @@ export async function getOccurrenceForTriage(
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {
@@ -125,9 +125,9 @@ export async function getTerritorialContext(
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {
@@ -164,9 +164,9 @@ export async function updateOccurrenceStatus(
 
   const response = await fetch(endpoint, {
     method: "PATCH",
-    headers: {
+    headers: getAuthHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify({
       statusKey,
     }),

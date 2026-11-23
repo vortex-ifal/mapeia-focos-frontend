@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { buildApiUrl } from "@/services/api/api.config";
+import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
 import type {
   OccurrenceListApiItem,
   OccurrencesListApiResponse,
@@ -67,9 +67,9 @@ async function getOccurrencesPage(
 
   const response = await fetch(endpoint, {
     method: "GET",
-    headers: {
+    headers: getAuthHeaders({
       Accept: "application/json",
-    },
+    }),
   });
 
   if (!response.ok) {
