@@ -14,7 +14,6 @@ import {
   getAgentOccurrenceStatusPresentation,
   getAgentPrioritiesPath,
   getLocationDetails,
-  handleStartInspection,
 } from "@/controllers/agent/agent-occurrence-details.controller";
 import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
 import type { OccurrenceDetailMedia } from "@/types/occurrence-details";
@@ -405,9 +404,8 @@ export function AgentOccurrenceDetails({
             {/* Footer action button */}
             <div className="mt-auto pt-6">
               {canStart ? (
-                <button
-                  type="button"
-                  onClick={handleStartInspection}
+                <Link
+                  href={`/dia-em-campo/ocorrencias/${encodeURIComponent(occurrenceId)}/desfecho`}
                   className="
                     flex
                     h-[50px]
@@ -431,7 +429,7 @@ export function AgentOccurrenceDetails({
                   "
                 >
                   Iniciar vistoria
-                </button>
+                </Link>
               ) : (
                 <div>
                   <button
