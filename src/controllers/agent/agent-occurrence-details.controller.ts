@@ -1,5 +1,3 @@
-import { toast } from "react-toastify";
-
 import type {
   OperationalPriority,
   OperationalStatus,
@@ -163,7 +161,5 @@ export function getAgentOccurrenceDetailsPath(occurrenceId: string): string {
   return `/dia-em-campo/ocorrencias/${encodeURIComponent(occurrenceId)}`;
 }
 
-export function handleStartInspection(): void {
-  toast.info("Em breve");
-}
+export { getAgentInspectionPath } from "@/controllers/agent/inspection.controller";
 
