@@ -1,40 +1,73 @@
 import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
-import type { InspectionDraft } from "@/controllers/agent/inspection-outcome.controller";
+import type { InspectionDraft, InspectionOutcome } from "@/controllers/agent/inspection-outcome.controller";
 
-/**
- * A rota real de criação/conclusão de vistoria ainda precisa ser confirmada
- * com o time de Back-end. Não usar endpoint inventado ou gravar status local.
- * O contrato/payload abaixo também deve ser validado antes de habilitar o POST.
- */
+export type InspectionApiResponse = {
+  id: string;
+  occurrenceId: string;
+  agentId: string;
+  status: "draft" | "completed";
+  condition: string | null;
+  actionsTaken: string | null;
+  notes: string | null;
+  result: InspectionOutcome | null;
+  inspectedAt: string;
+};
+
+function getEndpoint(occurrenceId: string): string {
+  return buildApiUrl(`occurrences/${encodeURIComponent(occurrenceId)}/inspections`);
+}
+
+async function readResponse(response: Response): Promise<InspectionApiResponse> {
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("Sessão expirada. Entre novamente.");
+    if (response.status === 403) throw new Error("A ocorrência não está atribuída a este agente.");
+    if (response.status === 404) throw new Error("Ocorrência ou rascunho não encontrado.");
+    if (response.status === 409) throw new Error("Esta ocorrência não está disponível para vistoria.");
+    throw new Error(`Não foi possível processar a vistoria (HTTP ${response.status}).`);
+  }
+  return response.json() as Promise<InspectionApiResponse>;
+}
+
+export async function getInspectionDraft(occurrenceId: string): Promise<InspectionApiResponse | null> {
+  const response = await fetch(`${getEndpoint(occurrenceId)}/draft`, {
+    headers: getAuthHeaders({ Accept: "application/json" }),
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  return readResponse(response);
+}
+
+export async function saveInspectionDraft(
+  occurrenceId: string,
+  draft: InspectionDraft,
+): Promise<InspectionApiResponse> {
+  return readResponse(await fetch(`${getEndpoint(occurrenceId)}/draft`, {
+    method: "PUT",
+    headers: getAuthHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
+    body: JSON.stringify({
+      condition: draft.condition.trim() || undefined,
+      actionsTaken: draft.actionsTaken.trim() || undefined,
+      notes: draft.notes.trim() || undefined,
+    }),
+  }));
+}
+
 export async function submitInspectionOutcome(
   occurrenceId: string,
   draft: InspectionDraft,
-): Promise<void> {
-  const endpointTemplate = process.env.NEXT_PUBLIC_INSPECTION_SUBMIT_PATH;
-  if (!endpointTemplate || !endpointTemplate.includes(":occurrenceId")) {
-    throw new Error("Conclusão indisponível: contrato da API de vistorias pendente de integração com o Back-end.");
+): Promise<InspectionApiResponse> {
+  if (!draft.outcome) throw new Error("Selecione um desfecho antes de concluir.");
+  if (!draft.condition.trim() || draft.condition.trim().length > 100 || !draft.actionsTaken.trim()) {
+    throw new Error("Informe a condição encontrada (até 100 caracteres) e as ações realizadas.");
   }
-  if (!draft.outcome) {
-    throw new Error("Selecione um desfecho antes de concluir.");
-  }
-  if (!draft.condition || !draft.actions) {
-    throw new Error("É necessário concluir o registro da vistoria (T058) antes de enviar.");
-  }
-  const endpoint = buildApiUrl(endpointTemplate.replace(":occurrenceId", encodeURIComponent(occurrenceId)).replace(/^\/+/, ""));
-  const response = await fetch(endpoint, {
+  return readResponse(await fetch(getEndpoint(occurrenceId), {
     method: "POST",
     headers: getAuthHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
     body: JSON.stringify({
-      outcome: draft.outcome,
+      condition: draft.condition.trim(),
+      actionsTaken: draft.actionsTaken.trim(),
       notes: draft.notes.trim(),
-      condition: draft.condition,
-      actions: draft.actions,
-      mediaIds: (draft.media ?? []).map((item) => item.id),
+      result: draft.outcome,
     }),
-  });
-  if (!response.ok) {
-    if (response.status === 401) throw new Error("Sessão expirada. Entre novamente.");
-    if (response.status === 403) throw new Error("Você não possui permissão para concluir esta vistoria.");
-    throw new Error(`Não foi possível concluir a vistoria (HTTP ${response.status}). Tente novamente.`);
-  }
+  }));
 }

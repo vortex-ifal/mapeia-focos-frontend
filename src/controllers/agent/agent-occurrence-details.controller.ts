@@ -1,5 +1,3 @@
-import { toast } from "react-toastify";
-
 import type {
   OperationalPriority,
   OperationalStatus,
@@ -71,7 +69,7 @@ export function canStartInspection(
   }
 
   const key = typeof status === "string" ? status : status.key;
-  return key === "accepted" || key === "forwarded_for_inspection";
+  return key === "forwarded_for_inspection";
 }
 
 export function getAgentOccurrencePriorityPresentation(
@@ -162,8 +160,3 @@ export function getAgentPrioritiesPath(): string {
 export function getAgentOccurrenceDetailsPath(occurrenceId: string): string {
   return `/dia-em-campo/ocorrencias/${encodeURIComponent(occurrenceId)}`;
 }
-
-export function handleStartInspection(): void {
-  toast.info("Em breve");
-}
-

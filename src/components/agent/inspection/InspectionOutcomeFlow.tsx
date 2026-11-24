@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CircleCheck, Info, TriangleAlert, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, CircleCheck, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -17,7 +17,7 @@ import { decodeJwtPayload, type JwtAuthPayload } from "@/utils/jwt.utils";
 import { useRouter } from "next/navigation";
 import { getLocationDetails } from "@/controllers/agent/agent-occurrence-details.controller";
 import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
-import { submitInspectionOutcome } from "@/services/api/inspection-outcome.service";
+import { getInspectionDraft, saveInspectionDraft, submitInspectionOutcome } from "@/services/api/inspection-outcome.service";
 
 function hasActiveAgentSession(): boolean {
   const user = getAuthSession();
@@ -29,10 +29,10 @@ function hasActiveAgentSession(): boolean {
 }
 
 function readInspectionDraft(occurrenceId: string): InspectionDraft {
-  const blank: InspectionDraft = { outcome: null, notes: "" };
+  const blank: InspectionDraft = { outcome: null, notes: "", condition: "", actionsTaken: "" };
   if (typeof window === "undefined") return blank;
   try {
-    const saved = sessionStorage.getItem(inspectionDraftKey(occurrenceId));
+    const saved = sessionStorage.getItem(inspectionDraftKey(occurrenceId, getAuthSession()?.id ?? "anonymous"));
     if (!saved) return blank;
     const value: unknown = JSON.parse(saved);
     if (!value || typeof value !== "object" || !("outcome" in value)) return blank;
@@ -40,10 +40,8 @@ function readInspectionDraft(occurrenceId: string): InspectionDraft {
     return {
       outcome: isInspectionOutcome(record.outcome) ? record.outcome : null,
       notes: typeof record.notes === "string" ? record.notes : "",
-      condition: typeof record.condition === "string" ? record.condition : undefined,
-      actions: Array.isArray(record.actions)
-        ? record.actions.filter((item): item is string => typeof item === "string")
-        : undefined,
+      condition: typeof record.condition === "string" ? record.condition : "",
+      actionsTaken: typeof record.actionsTaken === "string" ? record.actionsTaken : "",
       media: Array.isArray(record.media)
         ? record.media.filter((item): item is { id: string; url: string } =>
             item !== null && typeof item === "object" &&
@@ -73,6 +71,9 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftMessage, setDraftMessage] = useState<string | null>(null);
+  const [remoteLoading, setRemoteLoading] = useState(true);
   const queryClient = useQueryClient();
   const router = useRouter();
   const detailPath = `/dia-em-campo/ocorrencias/${encodeURIComponent(occurrenceId)}`;
@@ -101,8 +102,33 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
   }, []);
 
   useEffect(() => {
+    if (!authorized) return;
+    let cancelled = false;
+    getInspectionDraft(occurrenceId)
+      .then((remote) => {
+        if (cancelled || !remote) return;
+        // O servidor pode fornecer dados da T058; campos editados localmente não são apagados.
+        setDraft((previous) => ({
+          ...previous,
+          condition: previous.condition || remote.condition || "",
+          actionsTaken: previous.actionsTaken || remote.actionsTaken || "",
+          notes: previous.notes || remote.notes || "",
+          outcome: previous.outcome || (isInspectionOutcome(remote.result) ? remote.result : null),
+        }));
+
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) setDraftMessage(
+          reason instanceof Error ? `Rascunho remoto indisponível: ${reason.message}` : "Não foi possível consultar o rascunho."
+        );
+      })
+      .finally(() => { if (!cancelled) setRemoteLoading(false); });
+    return () => { cancelled = true; };
+  }, [authorized, occurrenceId]);
+
+  useEffect(() => {
     if (success) return;
-    try { sessionStorage.setItem(inspectionDraftKey(occurrenceId), JSON.stringify(draft)); } catch { /* Sem armazenamento disponível. */ }
+    try { sessionStorage.setItem(inspectionDraftKey(occurrenceId, getAuthSession()?.id ?? "anonymous"), JSON.stringify(draft)); } catch { /* Sem armazenamento disponível. */ }
   }, [draft, occurrenceId, success]);
 
   const occurrenceQuery = useQuery({
@@ -120,18 +146,33 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
   }
 
   async function conclude() {
-    if (!draft.outcome || submitting || success) return;
+    if (!draft.outcome || !draft.condition.trim() || !draft.actionsTaken.trim() || submitting || success || remoteLoading) return;
     setError(null);
     setSubmitting(true);
     try {
       await submitInspectionOutcome(occurrenceId, draft);
-      sessionStorage.removeItem(inspectionDraftKey(occurrenceId));
+      sessionStorage.removeItem(inspectionDraftKey(occurrenceId, getAuthSession()?.id ?? "anonymous"));
       await queryClient.invalidateQueries({ queryKey: ["agent"] });
       setSuccess(true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Falha ao enviar a vistoria.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function saveDraft() {
+    if (savingDraft || remoteLoading) return;
+    setError(null);
+    setDraftMessage(null);
+    setSavingDraft(true);
+    try {
+      await saveInspectionDraft(occurrenceId, draft);
+      setDraftMessage("Rascunho salvo na API.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível salvar o rascunho.");
+    } finally {
+      setSavingDraft(false);
     }
   }
 
@@ -163,15 +204,28 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
           <h2 className="text-[14px] font-bold text-[#716B67]">Visita não concluída ou requer nova ação</h2>
           {INSPECTION_OUTCOMES.filter((item) => item.group === "pending").map((item) => <OutcomeOption key={item.value} item={item} checked={draft.outcome === item.value} onSelect={() => setDraft({ ...draft, outcome: item.value })} />)}
           <button type="button" disabled={!draft.outcome} className={primary} onClick={() => setStage(2)}>Continuar</button>
+          <p className="text-[12px] text-[#716B67]">Desfechos compatíveis com a API de vistorias. Apenas &quot;Foco eliminado&quot; poderá resolver automaticamente a ocorrência.</p>
         </>}
 
         {stage === 2 && <>
           {selected && <div className="flex h-[72px] items-center gap-2 rounded-[12px] border border-[#E9E0D4] bg-white p-3 text-[13px] font-semibold"><CircleCheck size={20} />{selected.label}</div>}
+          <label htmlFor="inspection-condition" className="rounded-[12px] border border-[#E9E0D4] bg-white p-3">
+            <span className="mb-2 block text-[12px] font-semibold text-[#716B67]">Condição encontrada *</span>
+            <input id="inspection-condition" type="text" maxLength={100} value={draft.condition} onChange={(event) => setDraft({ ...draft, condition: event.target.value })} placeholder="O que foi encontrado no local?" className="w-full bg-transparent text-[14px] outline-none" />
+            <span className="mt-1 block text-right text-[11px] text-[#716B67]">{draft.condition.length}/100</span>
+          </label>
+          <label htmlFor="inspection-actions" className="rounded-[12px] border border-[#E9E0D4] bg-white p-3">
+            <span className="mb-2 block text-[12px] font-semibold text-[#716B67]">Ações realizadas *</span>
+            <textarea id="inspection-actions" rows={3} value={draft.actionsTaken} onChange={(event) => setDraft({ ...draft, actionsTaken: event.target.value })} placeholder="Descreva as ações realizadas." className="w-full resize-y bg-transparent text-[14px] outline-none" />
+          </label>
           <label htmlFor="inspection-note" className="rounded-[12px] border border-[#E9E0D4] bg-white p-3">
             <span className="mb-2 block text-[12px] font-semibold text-[#716B67]">Observação</span>
             <textarea id="inspection-note" rows={3} maxLength={1000} value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="Descreva a situação encontrada durante a vistoria." className="w-full resize-y bg-transparent text-[14px] text-[#171717] outline-none placeholder:text-[#716B67]" />
           </label>
-          <button type="button" className={primary} onClick={() => setStage(3)}>Continuar</button>
+          {error && <p role="alert" className="text-[12px] text-[#9D352D]">{error}</p>}
+          {draftMessage && <p role="status" className="text-[12px] text-[#716B67]">{draftMessage}</p>}
+          <button type="button" className={secondary} disabled={remoteLoading || savingDraft} onClick={() => void saveDraft()}>{savingDraft ? "Salvando..." : "Salvar rascunho"}</button>
+          <button type="button" disabled={remoteLoading || !draft.condition.trim() || !draft.actionsTaken.trim()} className={primary} onClick={() => setStage(3)}>Continuar</button>
         </>}
 
         {stage === 3 && <>
@@ -180,15 +234,16 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
             <p className="text-[12px] text-[#716B67]">{address?.context ?? "Localização da ocorrência"}</p>
           </div>
           <section className="flex min-h-[290px] flex-col gap-3 rounded-[16px] border border-[#E9E0D4] bg-white p-4 text-[13px]">
-            <p><strong>Condição encontrada</strong> · {draft.condition ?? "Pendente (T058)"}</p>
-            <p><strong>Ações realizadas</strong> · {draft.actions?.join(", ") || "Pendentes (T058)"}</p>
+            <p><strong>Condição encontrada</strong> · {draft.condition.trim() || "Não informada"}</p>
+            <p><strong>Ações realizadas</strong> · {draft.actionsTaken.trim() || "Não informadas"}</p>
             <p><strong>Resultado</strong> · {draft.outcome ? getInspectionOutcomeLabel(draft.outcome) : "Não selecionado"}</p>
             <p><strong>Observação</strong> · {draft.notes.trim() || "Não preenchida"}</p>
           </section>
-          {photos.length > 0 && <div className="flex flex-wrap gap-[10px]" aria-label="Fotos da vistoria">{photos.map((photo) => <div key={photo.id} className="relative flex h-[82px] w-[104px] items-center justify-center overflow-hidden rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]"><ImageIcon size={20} /><span className="sr-only">Foto vinculada à vistoria</span></div>)}</div>}
+          {photos.length > 0 && <div className="flex flex-wrap gap-[10px]" aria-label="Fotos da vistoria">{photos.map((photo) => <div key={photo.id} className="relative flex h-[82px] w-[104px] items-center justify-center overflow-hidden rounded-[10px] border border-[#E9E0D4] bg-[#F4EFE6]">{/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo.url} alt="Foto vinculada à vistoria" className="h-full w-full object-cover" /></div>)}</div>}
           {error && <p role="alert" className="rounded-[12px] bg-[#F8E3E0] p-3 text-[13px] text-[#9D352D]">{error}</p>}
-          <button type="button" disabled={!draft.outcome || submitting || !draft.condition || !draft.actions || !process.env.NEXT_PUBLIC_INSPECTION_SUBMIT_PATH} className={primary} onClick={() => void conclude()}>{submitting ? "Enviando..." : "Concluir vistoria"}</button>
-          {(!draft.condition || !draft.actions || !process.env.NEXT_PUBLIC_INSPECTION_SUBMIT_PATH) && <p className="text-[12px] text-[#716B67]">Conclusão indisponível até integrar o registro da T058 e confirmar o contrato da API de vistorias.</p>}
+          <button type="button" disabled={!draft.outcome || submitting || remoteLoading || !draft.condition.trim() || !draft.actionsTaken.trim()} className={primary} onClick={() => void conclude()}>{submitting ? "Enviando..." : "Concluir vistoria"}</button>
+          {remoteLoading && <p className="text-[12px] text-[#716B67]">Consultando rascunho da API...</p>}
           <button type="button" className={secondary} onClick={() => { setError(null); setStage(1); }}>Voltar e editar</button>
         </>}
       </div>
@@ -198,8 +253,8 @@ export function InspectionOutcomeFlow({ occurrenceId }: { occurrenceId: string }
 
 type OutcomeItem = (typeof INSPECTION_OUTCOMES)[number];
 function OutcomeOption({ item, checked, onSelect }: { item: OutcomeItem; checked: boolean; onSelect: () => void }) {
-  return <button type="button" role="radio" aria-checked={checked} onClick={onSelect} className={`flex h-[72px] w-full items-center gap-2 rounded-[12px] border bg-white p-3 text-left text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32] ${checked ? "border-[#C94F32] bg-[#FFF5F0]" : "border-[#E9E0D4]"}`}>
-    {item.icon === "check" ? <CircleCheck size={20} aria-hidden /> : item.icon === "info" ? <Info size={20} aria-hidden /> : <TriangleAlert size={20} aria-hidden />}
+  return <button type="button" aria-pressed={checked} onClick={onSelect} className={`flex h-[72px] w-full items-center gap-2 rounded-[12px] border bg-white p-3 text-left text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32] ${checked ? "border-[#C94F32] bg-[#FFF5F0]" : "border-[#E9E0D4]"}`}>
+    {item.icon === "check" ? <CircleCheck size={20} aria-hidden /> : <TriangleAlert size={20} aria-hidden />}
     {item.label}
     <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full border border-[#C94F32]" aria-hidden="true">{checked && <span className="h-2 w-2 rounded-full bg-[#C94F32]" />}</span>
   </button>;
