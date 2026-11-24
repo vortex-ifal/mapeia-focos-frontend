@@ -763,7 +763,7 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
             occurrenceId={occurrence.id}
             protocol={occurrence.protocol}
             isArchived={occurrence.isArchived}
-            statusKey={occurrence.status.key}
+            isClosed={isOccurrenceClosed(occurrence.status)}
           />
         </div>
       </section>

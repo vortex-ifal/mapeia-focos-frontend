@@ -11,52 +11,104 @@ type Props = {
   occurrenceId: string;
   protocol: string;
   isArchived: boolean;
-  statusKey: string;
+  isClosed: boolean;
 };
 
 export function OccurrenceArchiveAction({
   occurrenceId,
   protocol,
   isArchived,
-  statusKey,
+  isClosed,
 }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const queryClient = useQueryClient();
 
   const action: ArchiveAction = isArchived ? "restore" : "archive";
-  const isBlocked = !isArchived && (statusKey === "resolved" || statusKey === "rejected");
+  const isBlocked = !isArchived && isClosed;
   const verb = isArchived ? "Restaurar" : "Arquivar";
 
   const mutation = useMutation({
     mutationFn: () => updateOccurrenceArchive(occurrenceId, action),
     onSuccess: async () => {
       setConfirmOpen(false);
+      triggerRef.current?.focus();
       toast.success(isArchived ? "Ocorrência restaurada com sucesso." : "Ocorrência arquivada com sucesso.");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["manager", "occurrences"] }),
-        queryClient.invalidateQueries({ queryKey: ["manager", "occurrence", occurrenceId] }),
+        // Inclui lista, detalhes, histórico e heatmap da gestão.
+        queryClient.invalidateQueries({ queryKey: ["manager"] }),
         queryClient.invalidateQueries({ queryKey: ["operations"] }),
+        queryClient.invalidateQueries({ queryKey: ["occurrences"] }),
+        queryClient.invalidateQueries({ queryKey: ["assignment", "occurrence", occurrenceId] }),
+        queryClient.invalidateQueries({ queryKey: ["triage", "occurrence", occurrenceId] }),
+        queryClient.invalidateQueries({ queryKey: ["triage", "territorial-context", occurrenceId] }),
+        queryClient.invalidateQueries({ queryKey: ["priority", "occurrence", occurrenceId] }),
       ]);
     },
   });
 
+  function openDialog() {
+    mutation.reset();
+    setConfirmOpen(true);
+  }
+
+  function closeDialog() {
+    if (mutation.isPending) return;
+    mutation.reset();
+    setConfirmOpen(false);
+    // Return focus immediately to the control that opened the dialog.
+    triggerRef.current?.focus();
+  }
+
   useEffect(() => {
     if (!confirmOpen) return;
     cancelRef.current?.focus();
+
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !mutation.isPending) setConfirmOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (!mutation.isPending) closeDialog();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLButtonElement>(
+          'button:not([disabled])',
+        ),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const activeElement = document.activeElement;
+      if (event.shiftKey && (activeElement === first || !dialogRef.current.contains(activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (activeElement === last || !dialogRef.current.contains(activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmOpen, mutation.isPending]);
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={isBlocked || mutation.isPending}
-        onClick={() => setConfirmOpen(true)}
+        onClick={openDialog}
         className="flex h-11 w-full items-center justify-center rounded-[12px] border border-[#E9E0D4] bg-white px-3 text-[13px] font-bold text-[#171717] transition-colors hover:bg-[#F4EFE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#F4EFE6] disabled:text-[#A8A29E]"
       >
         {verb} ocorrência
@@ -72,10 +124,11 @@ export function OccurrenceArchiveAction({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !mutation.isPending) setConfirmOpen(false);
+            if (event.target === event.currentTarget) closeDialog();
           }}
         >
           <section
+            ref={dialogRef}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="archive-dialog-title"
@@ -100,7 +153,7 @@ export function OccurrenceArchiveAction({
                 ref={cancelRef}
                 type="button"
                 disabled={mutation.isPending}
-                onClick={() => setConfirmOpen(false)}
+                onClick={closeDialog}
                 className="h-11 rounded-[12px] border border-[#E9E0D4] bg-white px-5 text-[13px] font-bold text-[#171717] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32] disabled:opacity-60"
               >
                 Cancelar
