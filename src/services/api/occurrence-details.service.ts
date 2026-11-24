@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { buildApiUrl, getAuthHeaders } from "@/services/api/api.config";
-import type { OccurrenceDetail } from "@/types/occurrence-details";
+import type {
+  OccurrenceDetail,
+  OccurrenceHistoryItem,
+} from "@/types/occurrence-details";
 
 const operationalStatusSchema = z.object({
   key: z.string(),
@@ -39,6 +42,24 @@ const occurrenceDetailSchema = z.object({
   media: z.array(mediaSchema).nullish().transform((val) => val ?? []),
 });
 
+const occurrenceHistoryAuthorSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+  })
+  .nullable();
+
+const occurrenceHistoryItemSchema = z.object({
+  id: z.string(),
+  eventKey: z.string(),
+  eventDescription: z.string(),
+  author: occurrenceHistoryAuthorSchema,
+  createdAt: z.string(),
+});
+
+const occurrenceHistorySchema = z.array(occurrenceHistoryItemSchema);
+
+// TODO(T056): Replace this contingency fixture with real API responses once the backend service is integrated across all environments.
 export const OCCURRENCE_DETAIL_FIXTURE: OccurrenceDetail = {
   id: "fixture-0248",
   protocol: "MF-0248",
@@ -160,4 +181,46 @@ export async function getOccurrenceDetails(
     priority: parsed.data.priority ?? null,
     assignedAgent: parsed.data.assignedAgent ?? null,
   };
+}
+
+export async function getOccurrenceHistory(
+  occurrenceId: string,
+): Promise<OccurrenceHistoryItem[]> {
+  const endpoint = buildApiUrl(`occurrences/${occurrenceId}/history`);
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: getAuthHeaders({
+      Accept: "application/json",
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        "Não foi possível carregar o histórico da ocorrência.",
+      ),
+    );
+  }
+
+  let responseData: unknown;
+
+  try {
+    responseData = await response.json();
+  } catch {
+    throw new Error(
+      "A API retornou uma resposta inválida para o histórico da ocorrência.",
+    );
+  }
+
+  const parsed = occurrenceHistorySchema.safeParse(responseData);
+
+  if (!parsed.success) {
+    throw new Error(
+      "A API retornou o histórico da ocorrência em formato inesperado.",
+    );
+  }
+
+  return parsed.data;
 }

@@ -609,12 +609,22 @@ export function AgentOccurrenceDetails({
                         }
                       `}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={m.url}
-                        alt={`Miniatura ${idx + 1}`}
-                        className="pointer-events-none h-full w-full object-cover"
-                      />
+                      {m.url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={m.url}
+                          alt={`Miniatura ${idx + 1}`}
+                          className="pointer-events-none h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#F4EFE6] text-[#716B67]">
+                          <LucideImage
+                            size={18}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

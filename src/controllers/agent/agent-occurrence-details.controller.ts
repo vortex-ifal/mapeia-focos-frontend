@@ -125,7 +125,10 @@ export function getLocationDetails(occurrence: {
   situationType?: string | null;
 }): LocationDetailsPresentation {
   const fullAddress = occurrence.address?.trim() ?? "";
-  const region = getOccurrenceRegion(fullAddress);
+  const rawRegion = getOccurrenceRegion(fullAddress);
+  const hasValidRegion =
+    Boolean(rawRegion) && rawRegion !== "Região não informada";
+  const region = hasValidRegion ? rawRegion : "";
 
   // Split street and potential extra parts
   const addressParts = fullAddress
