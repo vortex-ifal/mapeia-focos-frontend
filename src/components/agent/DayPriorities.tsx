@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DayPrioritiesMap } from "@/components/agent/DayPrioritiesMap";
 import { DayPriorityCard } from "@/components/agent/DayPriorityCard";
-import { AUTH_EVENT, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
+import { AUTH_EVENT, clearAuthSession, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
 import {
   mapAgentOccurrence,
   sortAgentPriorities,
@@ -23,9 +23,13 @@ export function DayPriorities() {
   const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
+    let redirecting = false;
     function validateSession() {
+      if (redirecting) return;
       if (!hasActiveAgentSession()) {
+        redirecting = true;
         setSessionChecked(false);
+        clearAuthSession();
         window.location.replace(LOGIN_ROUTE);
         return;
       }

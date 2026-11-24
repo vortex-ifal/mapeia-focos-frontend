@@ -22,11 +22,15 @@ const occurrenceSchema = z.object({
 });
 
 const agentSchema = z.object({
-  agentId: z.string(),
+  id: z.string(),
   name: z.string(),
-  sectorRegion: z.string().nullable(),
-  totalActiveTasks: z.number(),
-});
+  activeTasksCount: z.number(),
+}).transform((agent) => ({
+  agentId: agent.id,
+  name: agent.name,
+  sectorRegion: null,
+  totalActiveTasks: agent.activeTasksCount,
+}));
 
 const agentsSchema = z.array(agentSchema);
 
@@ -92,7 +96,7 @@ export async function getOccurrenceForAssignment(
 export async function getAgentsForAssignment(): Promise<
   AssignmentAgentResponse[]
 > {
-  const endpoint = buildApiUrl("users/agentes");
+  const endpoint = buildApiUrl("agents");
 
   const response = await fetch(endpoint, {
     method: "GET",

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { LogoutButton } from "@/components/auth/LogoutButton";
-import { AUTH_EVENT, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
+import { AUTH_EVENT, clearAuthSession, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
 import {
   formatCardNumber,
   formatWaitingTime,
@@ -23,9 +23,13 @@ export function FieldDay() {
   const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
+    let redirecting = false;
     function validateSession() {
+      if (redirecting) return;
       if (!hasActiveAgentSession()) {
+        redirecting = true;
         setSessionChecked(false);
+        clearAuthSession();
         window.location.replace(LOGIN_ROUTE);
         return;
       }

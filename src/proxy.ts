@@ -39,11 +39,46 @@ function isAgentRoute(pathname: string): boolean {
   return AGENT_ROUTES.some((route) => pathname.startsWith(route));
 }
 
+/**
+ * The proxy checks expiration and role consistency to avoid redirect loops.
+ * Backend endpoints must still verify the token's signature and permissions:
+ * decoding a JWT here is not an authentication mechanism.
+ */
+function getActiveCookieRole(token: string | undefined, cookieRole: string | undefined): string | null {
+  if (!token || !cookieRole) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "="))) as {
+      exp?: unknown;
+      role?: unknown;
+    };
+    if (typeof payload.exp !== "number" || payload.exp * 1000 <= Date.now()) return null;
+    if (typeof payload.role !== "string") return null;
+    const role = payload.role.toLowerCase();
+    if (!["agent", "manager", "citizen"].includes(role)) return null;
+    return role === cookieRole ? role : null;
+  } catch {
+    return null;
+  }
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userRole = request.cookies.get(AUTH_ROLE_COOKIE)?.value;
   const authToken = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
-  const authenticatedRole = authToken ? userRole : undefined;
+  const authenticatedRole = getActiveCookieRole(authToken, userRole);
+  const hasInvalidCookies = Boolean(authToken || userRole) && !authenticatedRole;
+
+  function finish(response: NextResponse): NextResponse {
+    if (hasInvalidCookies) {
+      response.cookies.delete(AUTH_ROLE_COOKIE);
+      response.cookies.delete(AUTH_TOKEN_COOKIE);
+    }
+    return response;
+  }
+
 
   function noStore(response: NextResponse): NextResponse {
     response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
@@ -52,21 +87,21 @@ export function proxy(request: NextRequest) {
 
   // Protected agent routes require both authentication cookies.
   if (isAgentRoute(pathname) && (!authToken || authenticatedRole !== "agent")) {
-    return noStore(NextResponse.redirect(new URL(LOGIN_ROUTE, request.url)));
+    return finish(noStore(NextResponse.redirect(new URL(LOGIN_ROUTE, request.url))));
   }
 
   // Management pages require both cookies and the manager role.
   if (isManagerRoute(pathname) && (!authToken || authenticatedRole !== "manager")) {
-    return noStore(NextResponse.redirect(new URL("/gestao/entrar", request.url)));
+    return finish(noStore(NextResponse.redirect(new URL("/gestao/entrar", request.url))));
   }
 
   // An authenticated agent cannot access citizen pages or the login page.
   if (authenticatedRole === "agent" && (isCitizenRoute(pathname) || pathname === LOGIN_ROUTE)) {
-    return NextResponse.redirect(new URL(AGENT_FIELD_DAY_ROUTE, request.url));
+    return finish(NextResponse.redirect(new URL(AGENT_FIELD_DAY_ROUTE, request.url)));
   }
 
   const response = NextResponse.next();
-  return isAgentRoute(pathname) || isManagerRoute(pathname) ? noStore(response) : response;
+  return finish(isAgentRoute(pathname) || isManagerRoute(pathname) ? noStore(response) : response);
 }
 
 export const config = {

@@ -315,7 +315,9 @@ export function AgentAssignment() {
                   ? agentsQuery.error instanceof Error
                     ? agentsQuery.error.message
                     : "Não foi possível carregar os agentes."
-                  : !assignmentAllowed
+                  : !assignment &&
+                    !assignmentAllowed &&
+                    occurrence.status.key !== "forwarded_for_inspection"
                     ? "A ocorrência precisa estar validada e possuir prioridade antes da atribuição."
                     : mutationError
               }

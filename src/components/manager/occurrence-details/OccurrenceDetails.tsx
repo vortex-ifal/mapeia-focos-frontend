@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
+import { OccurrenceHistory } from "@/components/manager/occurrence-details/OccurrenceHistory";
 import { DesktopNavigationRail } from "@/components/manager/navigation/DesktopNavigationRail";
 import { ManagerHomeShortcut } from "@/components/manager/navigation/ManagerHomeShortcut";
 import { MediaThumbnail } from "@/components/manager/operations/MediaThumbnail";
@@ -16,15 +17,19 @@ import {
   getOccurrenceAssignmentPath,
   getOccurrencePriorityLabel,
   getOccurrencePriorityPath,
-  getOccurrenceProgress,
   getOccurrenceStatusLabel,
   getOccurrenceTriagePath,
+  isOccurrenceClosed,
   needsOccurrenceTriage,
 } from "@/controllers/manager/occurrence-details.controller";
-import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
+import {
+  getOccurrenceDetails,
+  getOccurrenceHistory,
+} from "@/services/api/occurrence-details.service";
 import type {
   OccurrenceDetail,
   OccurrenceDetailMedia,
+  OccurrenceHistoryItem,
 } from "@/types/occurrence-details";
 import { formatRelativeElapsedTime } from "@/utils/occurrence.utils";
 
@@ -35,12 +40,33 @@ type OccurrenceDetailsProps = {
 export function OccurrenceDetails({ occurrenceId }: OccurrenceDetailsProps) {
   const occurrenceQuery = useQuery({
     queryKey: ["manager", "occurrence", occurrenceId],
+
     queryFn: () => getOccurrenceDetails(occurrenceId),
+
     staleTime: 30_000,
+
+    refetchOnWindowFocus: false,
+  });
+
+  const historyQuery = useQuery({
+    queryKey: ["manager", "occurrence", occurrenceId, "history"],
+
+    queryFn: () => getOccurrenceHistory(occurrenceId),
+
+    enabled: occurrenceQuery.isSuccess,
+
+    staleTime: 30_000,
+
     refetchOnWindowFocus: false,
   });
 
   const occurrence = occurrenceQuery.data;
+
+  const historyError = historyQuery.isError
+    ? historyQuery.error instanceof Error
+      ? historyQuery.error.message
+      : "Não foi possível carregar o histórico da ocorrência."
+    : null;
 
   return (
     <main
@@ -157,7 +183,15 @@ export function OccurrenceDetails({ occurrenceId }: OccurrenceDetailsProps) {
                 lg:grid-cols-[minmax(0,720px)_minmax(0,560px)]
               "
             >
-              <OccurrenceMainPanel occurrence={occurrence} />
+              <OccurrenceMainPanel
+                occurrence={occurrence}
+                history={historyQuery.data ?? []}
+                historyLoading={historyQuery.isPending}
+                historyError={historyError}
+                onHistoryRetry={() => {
+                  void historyQuery.refetch();
+                }}
+              />
 
               <OperationalDetailsPanel occurrence={occurrence} />
             </div>
@@ -170,22 +204,25 @@ export function OccurrenceDetails({ occurrenceId }: OccurrenceDetailsProps) {
 
 type OccurrenceMainPanelProps = {
   occurrence: OccurrenceDetail;
+  history: OccurrenceHistoryItem[];
+  historyLoading: boolean;
+  historyError: string | null;
+  onHistoryRetry: () => void;
 };
 
-function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
+function OccurrenceMainPanel({
+  occurrence,
+  history,
+  historyLoading,
+  historyError,
+  onHistoryRetry,
+}: OccurrenceMainPanelProps) {
   const statusLabel = getOccurrenceStatusLabel(occurrence.status);
 
   const locationContext = getLocationContext(
     occurrence.address,
     occurrence.latitude,
     occurrence.longitude,
-  );
-
-  const progress = getOccurrenceProgress(
-    occurrence.status,
-    occurrence.priority,
-    occurrence.createdAt,
-    occurrence.updatedAt,
   );
 
   return (
@@ -256,7 +293,14 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
           py-[11px]
         "
       >
-        <p className="text-[13px] font-bold">{occurrence.address}</p>
+        <p
+          className="
+            text-[13px]
+            font-bold
+          "
+        >
+          {occurrence.address}
+        </p>
 
         <p
           className="
@@ -284,7 +328,14 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
           py-[14px]
         "
       >
-        <h3 className="text-[14px] font-bold">Descrição da ocorrência</h3>
+        <h3
+          className="
+            text-[14px]
+            font-bold
+          "
+        >
+          Descrição da ocorrência
+        </h3>
 
         <p
           className="
@@ -297,58 +348,12 @@ function OccurrenceMainPanel({ occurrence }: OccurrenceMainPanelProps) {
         </p>
       </section>
 
-      <section
-        className="
-          mt-[10px]
-          rounded-[12px]
-          border
-          border-[#E9E0D4]
-          px-[14px]
-          py-[14px]
-        "
-      >
-        <h3 className="text-[14px] font-bold">
-          Andamento / histórico resumido
-        </h3>
-
-        <div
-          className="
-            mt-[10px]
-            flex
-            flex-col
-            gap-[10px]
-          "
-        >
-          {progress.map((item, index) => (
-            <div
-              key={`${item.label}-${index}`}
-              className="
-                flex
-                min-h-7
-                items-center
-                gap-[10px]
-              "
-            >
-              <span
-                className={`
-                  h-[18px]
-                  w-[18px]
-                  shrink-0
-                  rounded-full
-                  border
-                  ${
-                    item.completed
-                      ? "border-[#584A57] bg-[#584A57]"
-                      : "border-[#E9E0D4] bg-white"
-                  }
-                `}
-              />
-
-              <p className="text-[13px]">{item.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <OccurrenceHistory
+        history={history}
+        isLoading={historyLoading}
+        error={historyError}
+        onRetry={onHistoryRetry}
+      />
     </section>
   );
 }
@@ -374,9 +379,30 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
   }
 
   return (
-    <div className="mt-[10px]">
+    <section
+      aria-labelledby="occurrence-evidence-title"
+      className="
+        mt-[10px]
+        rounded-[12px]
+        border
+        border-[#E9E0D4]
+        px-[14px]
+        py-[14px]
+      "
+    >
+      <h3
+        id="occurrence-evidence-title"
+        className="
+          text-[14px]
+          font-bold
+        "
+      >
+        Evidências
+      </h3>
+
       <div
         className="
+          mt-3
           flex
           flex-wrap
           gap-2
@@ -405,20 +431,16 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
               title="Abrir evidência"
               aria-label={`Abrir ${alt}`}
               className="
-                rounded-[10px]
-                transition
-                hover:opacity-90
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-[#C94F32]
-                focus-visible:ring-offset-2
-              "
+                    rounded-[10px]
+                    transition
+                    hover:opacity-90
+                    focus-visible:outline-none
+                    focus-visible:ring-2
+                    focus-visible:ring-[#C94F32]
+                    focus-visible:ring-offset-2
+                  "
             >
-              <MediaThumbnail
-                alt={alt}
-                src={item.url}
-                type={item.type}
-              />
+              <MediaThumbnail alt={alt} src={item.url} type={item.type} />
             </a>
           );
         })}
@@ -435,7 +457,7 @@ function EvidenceSection({ media, protocol }: EvidenceSectionProps) {
         {media.length === 1 ? "evidência registrada" : "evidências registradas"}{" "}
         nesta ocorrência.
       </p>
-    </div>
+    </section>
   );
 }
 
@@ -457,6 +479,12 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
 
   const needsTriage = needsOccurrenceTriage(occurrence.status);
 
+  const occurrenceClosed = isOccurrenceClosed(occurrence.status);
+
+  const priorityActionLabel = occurrence.priority
+    ? "Editar prioridade"
+    : "Definir prioridade";
+
   return (
     <aside
       className="
@@ -471,7 +499,14 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
         lg:overflow-y-auto
       "
     >
-      <h2 className="text-[20px] font-bold">Detalhes operacionais</h2>
+      <h2
+        className="
+          text-[20px]
+          font-bold
+        "
+      >
+        Detalhes operacionais
+      </h2>
 
       <div
         className="
@@ -493,6 +528,33 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
           Consulte localização, evidências, status e histórico antes de agir.
         </p>
       </div>
+
+      {occurrenceClosed ? (
+        <div
+          role="status"
+          className="
+            mt-[10px]
+            rounded-[10px]
+            border
+            border-[#E9E0D4]
+            bg-[#F4EFE6]
+            px-3
+            py-3
+          "
+        >
+          <p
+            className="
+              text-[12px]
+              font-semibold
+              leading-[1.45]
+              text-[#716B67]
+            "
+          >
+            Esta ocorrência está encerrada. As ações de edição, prioridade e
+            despacho estão bloqueadas.
+          </p>
+        </div>
+      ) : null}
 
       <div
         className="
@@ -540,11 +602,21 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
           label="Responsável"
           value={
             occurrence.assignedAgent ? (
-              <span className="font-semibold text-[#171717]">
+              <span
+                className="
+                  font-semibold
+                  text-[#171717]
+                "
+              >
                 {occurrence.assignedAgent.name}
               </span>
             ) : (
-              <span className="font-semibold text-[#716B67]">
+              <span
+                className="
+                  font-semibold
+                  text-[#716B67]
+                "
+              >
                 Não atribuído
               </span>
             )
@@ -574,93 +646,149 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
         />
       </div>
 
-      <div
+      <section
+        aria-labelledby="occurrence-actions-title"
         className="
-          mt-[10px]
-          flex
-          flex-col
-          gap-[10px]
+          mt-[14px]
         "
       >
-        {needsTriage ? (
-          <Link
-            href={getOccurrenceTriagePath(occurrence.id)}
-            className="
-              flex
-              h-11
-              items-center
-              justify-center
-              rounded-[12px]
-              bg-[#C94F32]
-              text-[13px]
-              font-bold
-              text-white
-            "
-          >
-            Revisar ocorrência
-          </Link>
-        ) : null}
-
-        {canManagePriority ? (
-          <Link
-            href={getOccurrencePriorityPath(occurrence.id)}
-            className="
-              flex
-              h-11
-              items-center
-              justify-center
-              rounded-[12px]
-              border
-              border-[#E9E0D4]
-              bg-white
-              text-[13px]
-              font-bold
-            "
-          >
-            {occurrence.priority ? "Alterar prioridade" : "Definir prioridade"}
-          </Link>
-        ) : null}
-
-        {canAssignAgent ? (
-          <Link
-            href={getOccurrenceAssignmentPath(occurrence.id)}
-            className="
-              flex
-              h-11
-              items-center
-              justify-center
-              rounded-[12px]
-              bg-[#C94F32]
-              text-[13px]
-              font-bold
-              text-white
-            "
-          >
-            Atribuir agente
-          </Link>
-        ) : null}
-
-        <button
-          type="button"
-          disabled
+        <h3
+          id="occurrence-actions-title"
           className="
-            flex
-            h-11
-            items-center
-            justify-center
-            rounded-[12px]
-            border
-            border-[#E9E0D4]
             text-[13px]
             font-bold
-            text-[#716B67]
-            opacity-60
+            text-[#171717]
           "
         >
-          Arquivar ocorrência
-        </button>
-      </div>
+          Ações
+        </h3>
+
+        <div
+          className="
+            mt-[10px]
+            flex
+            flex-col
+            gap-[10px]
+          "
+        >
+          {needsTriage ? (
+            <Link
+              href={getOccurrenceTriagePath(occurrence.id)}
+              className="
+                flex
+                h-11
+                items-center
+                justify-center
+                rounded-[12px]
+                bg-[#C94F32]
+                text-[13px]
+                font-bold
+                text-white
+                transition-colors
+                hover:bg-[#B9472E]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
+            >
+              Revisar ocorrência
+            </Link>
+          ) : (
+            <DisabledActionButton>Revisar ocorrência</DisabledActionButton>
+          )}
+
+          {canManagePriority ? (
+            <Link
+              href={getOccurrencePriorityPath(occurrence.id)}
+              className="
+                flex
+                h-11
+                items-center
+                justify-center
+                rounded-[12px]
+                border
+                border-[#E9E0D4]
+                bg-white
+                text-[13px]
+                font-bold
+                text-[#171717]
+                transition-colors
+                hover:bg-[#F4EFE6]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
+            >
+              {priorityActionLabel}
+            </Link>
+          ) : (
+            <DisabledActionButton>{priorityActionLabel}</DisabledActionButton>
+          )}
+
+          {canAssignAgent ? (
+            <Link
+              href={getOccurrenceAssignmentPath(occurrence.id)}
+              className="
+                flex
+                h-11
+                items-center
+                justify-center
+                rounded-[12px]
+                bg-[#C94F32]
+                text-[13px]
+                font-bold
+                text-white
+                transition-colors
+                hover:bg-[#B9472E]
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-[#C94F32]
+                focus-visible:ring-offset-2
+              "
+            >
+              Atribuir agente
+            </Link>
+          ) : (
+            <DisabledActionButton>Atribuir agente</DisabledActionButton>
+          )}
+
+          <DisabledActionButton>Arquivar ocorrência</DisabledActionButton>
+        </div>
+      </section>
     </aside>
+  );
+}
+
+type DisabledActionButtonProps = {
+  children: React.ReactNode;
+};
+
+function DisabledActionButton({ children }: DisabledActionButtonProps) {
+  return (
+    <button
+      type="button"
+      disabled
+      aria-disabled="true"
+      className="
+        flex
+        h-11
+        w-full
+        cursor-not-allowed
+        items-center
+        justify-center
+        rounded-[12px]
+        border
+        border-[#E9E0D4]
+        bg-[#F4EFE6]
+        text-[13px]
+        font-bold
+        text-[#A8A29E]
+      "
+    >
+      {children}
+    </button>
   );
 }
 
@@ -680,7 +808,14 @@ function OperationalRow({ label, value }: OperationalRowProps) {
         gap-4
       "
     >
-      <span className="text-[13px] text-[#716B67]">{label}</span>
+      <span
+        className="
+          text-[13px]
+          text-[#716B67]
+        "
+      >
+        {label}
+      </span>
 
       <div className="text-[13px]">{value}</div>
     </div>

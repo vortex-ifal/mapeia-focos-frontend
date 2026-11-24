@@ -14,6 +14,19 @@ export type OccurrenceDetailAssignedAgent = {
   name: string;
 };
 
+export type OccurrenceHistoryAuthor = {
+  id: string;
+  name: string;
+};
+
+export type OccurrenceHistoryItem = {
+  id: string;
+  eventKey: string;
+  eventDescription: string;
+  author: OccurrenceHistoryAuthor | null;
+  createdAt: string;
+};
+
 export type OccurrenceDetail = {
   id: string;
   protocol: string;

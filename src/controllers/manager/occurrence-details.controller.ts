@@ -2,15 +2,7 @@ import type {
   OperationalPriority,
   OperationalStatus,
 } from "@/types/operations";
-import {
-  formatRelativeElapsedTime,
-  getOccurrenceRegion,
-} from "@/utils/occurrence.utils";
-
-export type ProgressItem = {
-  label: string;
-  completed: boolean;
-};
+import { getOccurrenceRegion } from "@/utils/occurrence.utils";
 
 const priorityLabels: Record<OperationalPriority, string> = {
   low: "Baixa",
@@ -55,6 +47,10 @@ export function getLocationContext(
   return region;
 }
 
+export function isOccurrenceClosed(status: OperationalStatus): boolean {
+  return status.key === "resolved" || status.key === "rejected";
+}
+
 export function canManageOccurrencePriority(
   status: OperationalStatus,
 ): boolean {
@@ -88,109 +84,4 @@ export function getOccurrenceTriagePath(occurrenceId: string): string {
   return `/central-operacional/triagem?occurrenceId=${encodeURIComponent(
     occurrenceId,
   )}`;
-}
-
-export function getOccurrenceProgress(
-  status: OperationalStatus,
-  priority: OperationalPriority | null,
-  createdAt: string,
-  updatedAt: string,
-): ProgressItem[] {
-  const registered: ProgressItem = {
-    label: `Registrada · ${formatRelativeElapsedTime(createdAt)}`,
-    completed: true,
-  };
-
-  const currentStatus: ProgressItem = {
-    label: `${getOccurrenceStatusLabel(
-      status,
-    )} · atualizado ${formatRelativeElapsedTime(updatedAt)}`,
-    completed: true,
-  };
-
-  if (status.key === "rejected") {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Fluxo encerrado",
-        completed: true,
-      },
-    ];
-  }
-
-  if (status.key === "resolved") {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Ocorrência concluída",
-        completed: true,
-      },
-    ];
-  }
-
-  if (status.key === "registered") {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Aguardando triagem",
-        completed: false,
-      },
-    ];
-  }
-
-  if (status.key === "under_review") {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Aguardando conclusão da triagem",
-        completed: false,
-      },
-    ];
-  }
-
-  if (status.key === "accepted" && !priority) {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Aguardando definição de prioridade",
-        completed: false,
-      },
-    ];
-  }
-
-  if (status.key === "accepted" && priority) {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Aguardando atribuição de responsável",
-        completed: false,
-      },
-    ];
-  }
-
-  if (status.key === "forwarded_for_inspection") {
-    return [
-      registered,
-      currentStatus,
-      {
-        label: "Aguardando andamento da vistoria",
-        completed: false,
-      },
-    ];
-  }
-
-  return [
-    registered,
-    currentStatus,
-    {
-      label: "Aguardando próximo andamento",
-      completed: false,
-    },
-  ];
 }
