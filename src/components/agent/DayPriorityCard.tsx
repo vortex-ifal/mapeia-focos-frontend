@@ -1,5 +1,7 @@
 import clsx from "clsx";
+import Link from "next/link";
 
+import { getAgentOccurrenceDetailsPath } from "@/controllers/agent/agent-occurrence-details.controller";
 import type { AgentPriorityItem } from "@/types/agent-priorities";
 
 type DayPriorityCardProps = {
@@ -10,14 +12,23 @@ export function DayPriorityCard({ occurrence }: DayPriorityCardProps) {
   const highPriority = occurrence.priority === "high";
 
   return (
-    <article
+    <Link
+      href={getAgentOccurrenceDetailsPath(occurrence.id)}
+      aria-label={`Ver detalhes da ocorrência ${occurrence.displayCode}`}
       className={clsx(
         `
+          block
           w-full
           rounded-[12px]
           border
           px-[15px]
           py-[14px]
+          transition-colors
+          hover:opacity-95
+          focus-visible:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-[#C94F32]
+          focus-visible:ring-offset-2
         `,
         highPriority
           ? `
@@ -108,7 +119,7 @@ export function DayPriorityCard({ occurrence }: DayPriorityCardProps) {
           {occurrence.actionLabel}
         </p>
       </div>
-    </article>
+    </Link>
   );
 }
 
