@@ -14,9 +14,12 @@ export function OccurrenceListItem({ occurrence }: OccurrenceListItemProps) {
   return (
     <Link
       href={getOccurrenceDetailsPath(occurrence.id)}
+      aria-label={`${occurrence.displayCode}${occurrence.isArchived ? ", arquivada" : ""}: abrir detalhes`}
       className="
         block
+        h-auto
         min-h-[94px]
+        shrink-0
         rounded-[12px]
         border
         border-[#E9E0D4]
@@ -41,6 +44,12 @@ export function OccurrenceListItem({ occurrence }: OccurrenceListItemProps) {
       >
         {occurrence.displayCode}
       </p>
+
+      {occurrence.isArchived ? (
+        <span className="mt-[7px] inline-flex items-center rounded-full border border-[#D2CBC5] bg-[#F4EFE6] px-3 py-1 text-[11px] font-bold text-[#584A57]">
+          Arquivada
+        </span>
+      ) : null}
 
       <p
         className="

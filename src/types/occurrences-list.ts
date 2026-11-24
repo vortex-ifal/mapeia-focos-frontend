@@ -15,6 +15,8 @@ export type OccurrenceListApiItem = {
   updatedAt: string;
   status: OperationalStatus;
   priority: OperationalPriority | null;
+  isArchived: boolean;
+  archivedAt: string | null;
 };
 
 export type OccurrencesListApiResponse = {
@@ -39,6 +41,8 @@ export type OccurrenceListItem = {
   createdAt: string;
   updatedAt: string;
   elapsedMinutes: number;
+  isArchived: boolean;
+  archivedAt: string | null;
 };
 
 export type OccurrenceListFilters = {

@@ -38,6 +38,8 @@ const occurrenceDetailSchema = z.object({
   updatedAt: z.string(),
   status: operationalStatusSchema,
   priority: operationalPrioritySchema.nullable().optional(),
+  isArchived: z.boolean(),
+  archivedAt: z.string().nullable(),
   assignedAgent: assignedAgentSchema.optional(),
   media: z.array(mediaSchema).nullish().transform((val) => val ?? []),
 });
@@ -75,6 +77,8 @@ export const OCCURRENCE_DETAIL_FIXTURE: OccurrenceDetail = {
     name: "Validada",
   },
   priority: "high",
+  isArchived: false,
+  archivedAt: null,
   assignedAgent: {
     id: "agent-1",
     name: "Agente Silva",

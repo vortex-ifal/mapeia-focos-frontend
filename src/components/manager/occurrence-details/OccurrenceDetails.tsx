@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 import { OccurrenceHistory } from "@/components/manager/occurrence-details/OccurrenceHistory";
+import { OccurrenceArchiveAction } from "@/components/manager/occurrence-details/OccurrenceArchiveAction";
 import { DesktopNavigationRail } from "@/components/manager/navigation/DesktopNavigationRail";
 import { ManagerHomeShortcut } from "@/components/manager/navigation/ManagerHomeShortcut";
 import { MediaThumbnail } from "@/components/manager/operations/MediaThumbnail";
@@ -280,6 +281,9 @@ function OccurrenceMainPanel({
         )}
 
         <StatusBadge label={statusLabel} />
+        {occurrence.isArchived ? (
+          <span className="inline-flex h-9 items-center rounded-full border border-[#D2CBC5] bg-[#F4EFE6] px-3 text-[12px] font-semibold text-[#584A57]">Arquivada</span>
+        ) : null}
       </div>
 
       <div
@@ -470,16 +474,16 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
 
   const priorityLabel = getOccurrencePriorityLabel(occurrence.priority);
 
-  const canManagePriority = canManageOccurrencePriority(occurrence.status);
+  const canManagePriority = !occurrence.isArchived && canManageOccurrencePriority(occurrence.status);
 
-  const canAssignAgent = canAssignOccurrenceAgent(
+  const canAssignAgent = !occurrence.isArchived && canAssignOccurrenceAgent(
     occurrence.status,
     occurrence.priority,
   );
 
-  const needsTriage = needsOccurrenceTriage(occurrence.status);
+  const needsTriage = !occurrence.isArchived && needsOccurrenceTriage(occurrence.status);
 
-  const occurrenceClosed = isOccurrenceClosed(occurrence.status);
+  const occurrenceClosed = occurrence.isArchived || isOccurrenceClosed(occurrence.status);
 
   const priorityActionLabel = occurrence.priority
     ? "Editar prioridade"
@@ -511,11 +515,11 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
       <div
         className="
           mt-[10px]
-          min-h-[78px]
+          min-h-[52px]
           rounded-[10px]
           bg-[#EEE8ED]
           px-3
-          py-[14px]
+          py-[10px]
         "
       >
         <p
@@ -550,8 +554,9 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
               text-[#716B67]
             "
           >
-            Esta ocorrência está encerrada. As ações de edição, prioridade e
-            despacho estão bloqueadas.
+            {occurrence.isArchived
+              ? "Esta ocorrência está arquivada. Restaure-a para voltar a gerenciá-la."
+              : "Esta ocorrência está encerrada. As ações de edição, prioridade e despacho estão bloqueadas."}
           </p>
         </div>
       ) : null}
@@ -754,7 +759,12 @@ function OperationalDetailsPanel({ occurrence }: OperationalDetailsPanelProps) {
             <DisabledActionButton>Atribuir agente</DisabledActionButton>
           )}
 
-          <DisabledActionButton>Arquivar ocorrência</DisabledActionButton>
+          <OccurrenceArchiveAction
+            occurrenceId={occurrence.id}
+            protocol={occurrence.protocol}
+            isArchived={occurrence.isArchived}
+            isClosed={isOccurrenceClosed(occurrence.status)}
+          />
         </div>
       </section>
     </aside>

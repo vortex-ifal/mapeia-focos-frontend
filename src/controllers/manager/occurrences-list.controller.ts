@@ -45,6 +45,8 @@ export function mapOccurrenceToListItem(
     createdAt: occurrence.createdAt,
     updatedAt: occurrence.updatedAt,
     elapsedMinutes: calculateElapsedMinutes(occurrence.updatedAt),
+    isArchived: occurrence.isArchived,
+    archivedAt: occurrence.archivedAt,
   };
 }
 
