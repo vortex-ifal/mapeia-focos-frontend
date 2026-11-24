@@ -1,18 +1,17 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { clearAuthSession } from "@/controllers/auth.controller";
 
 export function ManagerLogoutButton() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
   function handleLogout() {
     clearAuthSession();
-
-    router.replace("/gestao/entrar");
-    router.refresh();
+    queryClient.clear();
+    window.location.replace("/gestao/entrar");
   }
 
   return (

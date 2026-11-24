@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import {
   AGENT_FIELD_DAY_ROUTE,
   getAuthSession,
@@ -16,12 +17,20 @@ export function CitizenHome() {
 
   useEffect(() => {
     const session = getAuthSession();
+
     if (session?.role === "agent") {
       router.replace(AGENT_FIELD_DAY_ROUTE);
     }
   }, [router]);
+
   return (
-    <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
+    <main
+      className="
+        min-h-dvh
+        bg-[#FBF8F2]
+        text-[#171717]
+      "
+    >
       <div
         className="
           mx-auto
@@ -37,18 +46,34 @@ export function CitizenHome() {
           max-[360px]:px-4
         "
       >
-        <header className="flex items-center">
+        <header
+          className="
+            flex
+            items-center
+            justify-between
+            gap-4
+          "
+        >
           <Image
             src="/brand/logo-horizontal.svg"
             alt="Mapeia Focos"
             width={128}
             height={30}
-            className="h-auto w-[128px]"
+            className="
+              h-auto
+              w-[128px]
+            "
             priority
           />
+
+          <LogoutButton />
         </header>
 
-        <section className="mt-[22px]">
+        <section
+          className="
+            mt-[22px]
+          "
+        >
           <h1
             className="
               text-[30px]
@@ -76,7 +101,14 @@ export function CitizenHome() {
           </p>
         </section>
 
-        <section className="mt-[15px] flex flex-col gap-[14px]">
+        <section
+          className="
+            mt-[15px]
+            flex
+            flex-col
+            gap-[14px]
+          "
+        >
           <Link
             href="/nova-ocorrencia"
             className="

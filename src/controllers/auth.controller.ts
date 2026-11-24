@@ -50,9 +50,11 @@ export function resolveHomeRouteByRole(roleOrProfile?: string | null): string {
 
 export function mapRoleToProfileName(role: string): UserProfileName {
   const normalized = normalizeRole(role);
+
   if (normalized === "agent" || normalized === "agente") {
     return "Agente";
   }
+
   if (
     normalized === "manager" ||
     normalized === "gestao" ||
@@ -60,14 +62,17 @@ export function mapRoleToProfileName(role: string): UserProfileName {
   ) {
     return "Gestor";
   }
+
   return "Cidadão";
 }
 
 export function mapRoleToUserRole(role?: string | null): UserRole {
   const normalized = normalizeRole(role);
+
   if (normalized === "agent" || normalized === "agente") {
     return "agent";
   }
+
   if (
     normalized === "manager" ||
     normalized === "gestao" ||
@@ -75,6 +80,7 @@ export function mapRoleToUserRole(role?: string | null): UserRole {
   ) {
     return "manager";
   }
+
   return "citizen";
 }
 
@@ -106,6 +112,7 @@ export async function authenticateUser(
     );
 
     const payload = decodeJwtPayload<JwtAuthPayload>(accessToken);
+
     const user = buildUserFromJwtPayload(
       payload,
       credentials.email.trim().toLowerCase(),
@@ -134,6 +141,7 @@ export async function registerCitizen(
 ): Promise<RegisterResult> {
   try {
     const trimmedDisplayName = data.displayName?.trim() ?? "";
+
     const effectiveName =
       trimmedDisplayName.length >= 3 ? trimmedDisplayName : "Cidadão";
 
@@ -146,7 +154,6 @@ export async function registerCitizen(
 
     await registerApi(payload);
 
-    // Automatically authenticate the newly registered citizen
     const loginResult = await authenticateUser({
       email: payload.email,
       password: payload.password,
@@ -185,11 +192,15 @@ export function saveAuthSession(user: AuthenticatedUser): void {
   }
 
   sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+
   if (user.token) {
     sessionStorage.setItem(AUTH_TOKEN_KEY, user.token);
+
     document.cookie = `${AUTH_TOKEN_COOKIE}=${user.token}; path=/; SameSite=Lax`;
   }
+
   document.cookie = `${AUTH_ROLE_COOKIE}=${user.role}; path=/; SameSite=Lax`;
+
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
@@ -199,6 +210,7 @@ export function getAuthSession(): AuthenticatedUser | null {
   }
 
   const stored = sessionStorage.getItem(AUTH_USER_KEY);
+
   if (!stored) {
     return null;
   }
@@ -218,6 +230,42 @@ export function getAuthToken(): string | null {
   return sessionStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+export function hasActiveAgentSession(): boolean {
+  const user = getAuthSession();
+  const token = getAuthToken();
+
+  if (!user || !token || user.role !== "agent" || user.token !== token) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload<JwtAuthPayload>(token);
+
+  return Boolean(
+    payload &&
+      mapRoleToUserRole(payload.role) === "agent" &&
+      typeof payload.exp === "number" &&
+      payload.exp * 1000 > Date.now(),
+  );
+}
+
+export function hasActiveManagerSession(): boolean {
+  const user = getAuthSession();
+  const token = getAuthToken();
+
+  if (!user || !token || user.role !== "manager" || user.token !== token) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload<JwtAuthPayload>(token);
+
+  return Boolean(
+    payload &&
+      mapRoleToUserRole(payload.role) === "manager" &&
+      typeof payload.exp === "number" &&
+      payload.exp * 1000 > Date.now(),
+  );
+}
+
 export function getAuthSessionSnapshot(): string | null {
   if (typeof window === "undefined") {
     return null;
@@ -233,8 +281,14 @@ export function clearAuthSession(): void {
 
   sessionStorage.removeItem(AUTH_USER_KEY);
   sessionStorage.removeItem(AUTH_TOKEN_KEY);
+
+  localStorage.removeItem(AUTH_USER_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+
   document.cookie = `${AUTH_ROLE_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+
   document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
@@ -244,7 +298,10 @@ export function subscribeToAuthSession(callback: () => void): () => void {
   }
 
   window.addEventListener(AUTH_EVENT, callback);
+  window.addEventListener("storage", callback);
+
   return () => {
     window.removeEventListener(AUTH_EVENT, callback);
+    window.removeEventListener("storage", callback);
   };
 }

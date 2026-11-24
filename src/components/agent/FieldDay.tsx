@@ -1,11 +1,13 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useMemo, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AUTH_EVENT, clearAuthSession, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
 import {
   formatCardNumber,
   formatWaitingTime,
@@ -18,6 +20,45 @@ import {
 import { getAgentDashboard } from "@/services/api/field-day.service";
 
 export function FieldDay() {
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    let redirecting = false;
+    function validateSession() {
+      if (redirecting) return;
+      if (!hasActiveAgentSession()) {
+        redirecting = true;
+        setSessionChecked(false);
+        clearAuthSession();
+        window.location.replace(LOGIN_ROUTE);
+        return;
+      }
+
+      setSessionChecked(true);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        validateSession();
+      }
+    }
+
+    validateSession();
+    window.addEventListener("pageshow", validateSession);
+    window.addEventListener("popstate", validateSession);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener(AUTH_EVENT, validateSession);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", validateSession);
+      window.removeEventListener("popstate", validateSession);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener(AUTH_EVENT, validateSession);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const surveySnapshot = useSyncExternalStore(
     subscribeToSavedOfflineSurvey,
     getSavedOfflineSurveySnapshot,
@@ -29,6 +70,7 @@ export function FieldDay() {
   const dashboardQuery = useQuery({
     queryKey: ["agent", "dashboard"],
     queryFn: getAgentDashboard,
+    enabled: sessionChecked,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -43,6 +85,10 @@ export function FieldDay() {
   const priorityPresentation = useMemo(() => {
     return getPriorityPresentation(nextPriority?.priority ?? null);
   }, [nextPriority?.priority]);
+
+  if (!sessionChecked) {
+    return <main className="min-h-dvh bg-[#FBF8F2]" aria-busy="true" />;
+  }
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
@@ -60,26 +106,45 @@ export function FieldDay() {
           max-[360px]:px-4
         "
       >
-        <header className="flex items-center gap-2">
-          <Image
-            src="/brand/logo-horizontal.svg"
-            alt="Mapeia Focos"
-            width={128}
-            height={30}
-            className="h-auto w-[128px]"
-            priority
-          />
-
-          <span
+        <header
+          className="
+            flex
+            items-center
+            justify-between
+            gap-3
+          "
+        >
+          <div
             className="
-              text-[13px]
-              font-bold
-              tracking-wider
-              text-[#C94F32]
+              flex
+              min-w-0
+              items-center
+              gap-2
             "
           >
-            / AGENTE
-          </span>
+            <Image
+              src="/brand/logo-horizontal.svg"
+              alt="Mapeia Focos"
+              width={128}
+              height={30}
+              className="h-auto w-[128px]"
+              priority
+            />
+
+            <span
+              className="
+                whitespace-nowrap
+                text-[13px]
+                font-bold
+                tracking-wider
+                text-[#C94F32]
+              "
+            >
+              / AGENTE
+            </span>
+          </div>
+
+          <LogoutButton hasUnsavedDraft={hasSavedSurvey} />
         </header>
 
         <section className="mt-6">

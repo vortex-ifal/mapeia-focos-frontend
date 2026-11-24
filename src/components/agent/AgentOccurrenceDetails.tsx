@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Image as LucideImage, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 
+import { AUTH_EVENT, LOGIN_ROUTE, clearAuthSession, hasActiveAgentSession } from "@/controllers/auth.controller";
 import { AgentOccurrenceMap } from "@/components/agent/AgentOccurrenceMap";
 import {
   canStartInspection,
@@ -30,9 +31,43 @@ export function AgentOccurrenceDetails({
     useState<OccurrenceDetailMedia | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    let redirecting = false;
+    function validateSession() {
+      if (redirecting) return;
+      if (!hasActiveAgentSession()) {
+        redirecting = true;
+        setSessionChecked(false);
+        clearAuthSession();
+        window.location.replace(LOGIN_ROUTE);
+        return;
+      }
+      setSessionChecked(true);
+    }
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") validateSession();
+    };
+    validateSession();
+    window.addEventListener("pageshow", validateSession);
+    window.addEventListener("popstate", validateSession);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener(AUTH_EVENT, validateSession);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pageshow", validateSession);
+      window.removeEventListener("popstate", validateSession);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener(AUTH_EVENT, validateSession);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   const occurrenceQuery = useQuery({
     queryKey: ["agent", "occurrence", occurrenceId],
     queryFn: () => getOccurrenceDetails(occurrenceId),
+    enabled: sessionChecked,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -67,6 +102,10 @@ export function AgentOccurrenceDetails({
     setSelectedMedia(mediaList[0]);
     setIsViewerOpen(true);
   };
+
+  if (!sessionChecked) {
+    return <main className="min-h-dvh bg-[#FBF8F2]" aria-busy="true" />;
+  }
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">

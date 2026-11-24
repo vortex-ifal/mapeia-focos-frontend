@@ -166,4 +166,3 @@ export function getAgentOccurrenceDetailsPath(occurrenceId: string): string {
 export function handleStartInspection(): void {
   toast.info("Em breve");
 }
-

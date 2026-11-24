@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ChevronLeft, Map, Rows3 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DayPrioritiesMap } from "@/components/agent/DayPrioritiesMap";
 import { DayPriorityCard } from "@/components/agent/DayPriorityCard";
+import { AUTH_EVENT, clearAuthSession, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
 import {
   mapAgentOccurrence,
   sortAgentPriorities,
@@ -19,6 +20,45 @@ import type {
 } from "@/types/agent-priorities";
 
 export function DayPriorities() {
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    let redirecting = false;
+    function validateSession() {
+      if (redirecting) return;
+      if (!hasActiveAgentSession()) {
+        redirecting = true;
+        setSessionChecked(false);
+        clearAuthSession();
+        window.location.replace(LOGIN_ROUTE);
+        return;
+      }
+
+      setSessionChecked(true);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        validateSession();
+      }
+    }
+
+    validateSession();
+    window.addEventListener("pageshow", validateSession);
+    window.addEventListener("popstate", validateSession);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener(AUTH_EVENT, validateSession);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", validateSession);
+      window.removeEventListener("popstate", validateSession);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener(AUTH_EVENT, validateSession);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const [view, setView] = useState<AgentPrioritiesView>("list");
 
   const [sortBy, setSortBy] = useState<AgentPrioritiesSort>("default");
@@ -27,6 +67,7 @@ export function DayPriorities() {
     queryKey: ["agent", "priorities"],
 
     queryFn: getAgentWorklist,
+    enabled: sessionChecked,
 
     staleTime: 30_000,
 
@@ -43,6 +84,10 @@ export function DayPriorities() {
       ),
     [worklistQuery.data, sortBy],
   );
+
+  if (!sessionChecked) {
+    return <main className="min-h-dvh bg-[#FBF8F2]" aria-busy="true" />;
+  }
 
   return (
     <main
