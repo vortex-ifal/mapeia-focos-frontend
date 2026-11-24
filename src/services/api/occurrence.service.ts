@@ -4,8 +4,10 @@ import type {
   OccurrenceBackendPayload,
   OccurrenceStatusResponse,
 } from "@/types/occurrence";
+import type { OccurrenceDetail } from "@/types/occurrence-details";
 
 import { buildApiUrl, getAuthHeaders } from "./api.config";
+import { getOccurrenceDetails } from "./occurrence-details.service";
 
 export class OccurrenceNotFoundError extends Error {
   readonly status = 404;
@@ -140,4 +142,10 @@ export async function getOccurrenceStatusByProtocol(
   }
 
   return response.json();
+}
+
+export async function getOccurrenceById(
+  occurrenceId: string,
+): Promise<OccurrenceDetail> {
+  return getOccurrenceDetails(occurrenceId);
 }
