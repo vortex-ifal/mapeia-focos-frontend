@@ -1,7 +1,7 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import {
@@ -16,7 +16,7 @@ type LogoutButtonProps = {
 };
 
 export function LogoutButton({ hasUnsavedDraft = false }: LogoutButtonProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [confirmationOpen, setConfirmationOpen] = useState(false);
 
@@ -30,12 +30,9 @@ export function LogoutButton({ hasUnsavedDraft = false }: LogoutButtonProps) {
 
   function finishLogout() {
     clearAuthSession();
-
+    queryClient.clear();
     setConfirmationOpen(false);
-
-    router.replace(LOGIN_ROUTE);
-
-    router.refresh();
+    window.location.replace(LOGIN_ROUTE);
   }
 
   function handleLogout() {

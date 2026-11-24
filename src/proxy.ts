@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import {
   AGENT_FIELD_DAY_ROUTE,
   AUTH_ROLE_COOKIE,
+  AUTH_TOKEN_COOKIE,
   CITIZEN_HOME_ROUTE,
   LOGIN_ROUTE,
   REGISTER_ROUTE,
@@ -36,27 +37,26 @@ function isAgentRoute(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userRole = request.cookies.get(AUTH_ROLE_COOKIE)?.value;
+  const authToken = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
+  const authenticatedRole = authToken ? userRole : undefined;
 
-  // Agent cannot access citizen screens or citizen login:
-  if (userRole === "agent") {
-    if (isCitizenRoute(pathname) || pathname === LOGIN_ROUTE) {
-      return NextResponse.redirect(new URL(AGENT_FIELD_DAY_ROUTE, request.url));
-    }
+  function noStore(response: NextResponse): NextResponse {
+    response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+    return response;
   }
 
-  // Citizen cannot access agent module:
-  if (userRole === "citizen") {
-    if (isAgentRoute(pathname)) {
-      return NextResponse.redirect(new URL(CITIZEN_HOME_ROUTE, request.url));
-    }
+  // Protected agent routes require both authentication cookies.
+  if (isAgentRoute(pathname) && (!authToken || authenticatedRole !== "agent")) {
+    return noStore(NextResponse.redirect(new URL(LOGIN_ROUTE, request.url)));
   }
 
-  // Unauthenticated user cannot access agent module:
-  if (!userRole && isAgentRoute(pathname)) {
-    return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+  // An authenticated agent cannot access citizen pages or the login page.
+  if (authenticatedRole === "agent" && (isCitizenRoute(pathname) || pathname === LOGIN_ROUTE)) {
+    return NextResponse.redirect(new URL(AGENT_FIELD_DAY_ROUTE, request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  return isAgentRoute(pathname) ? noStore(response) : response;
 }
 
 export const config = {

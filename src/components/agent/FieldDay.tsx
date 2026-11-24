@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AUTH_EVENT, hasActiveAgentSession, LOGIN_ROUTE } from "@/controllers/auth.controller";
 import {
   formatCardNumber,
   formatWaitingTime,
@@ -19,6 +20,41 @@ import {
 import { getAgentDashboard } from "@/services/api/field-day.service";
 
 export function FieldDay() {
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    function validateSession() {
+      if (!hasActiveAgentSession()) {
+        setSessionChecked(false);
+        window.location.replace(LOGIN_ROUTE);
+        return;
+      }
+
+      setSessionChecked(true);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        validateSession();
+      }
+    }
+
+    validateSession();
+    window.addEventListener("pageshow", validateSession);
+    window.addEventListener("popstate", validateSession);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener(AUTH_EVENT, validateSession);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", validateSession);
+      window.removeEventListener("popstate", validateSession);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener(AUTH_EVENT, validateSession);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const surveySnapshot = useSyncExternalStore(
     subscribeToSavedOfflineSurvey,
     getSavedOfflineSurveySnapshot,
@@ -30,6 +66,7 @@ export function FieldDay() {
   const dashboardQuery = useQuery({
     queryKey: ["agent", "dashboard"],
     queryFn: getAgentDashboard,
+    enabled: sessionChecked,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -44,6 +81,10 @@ export function FieldDay() {
   const priorityPresentation = useMemo(() => {
     return getPriorityPresentation(nextPriority?.priority ?? null);
   }, [nextPriority?.priority]);
+
+  if (!sessionChecked) {
+    return <main className="min-h-dvh bg-[#FBF8F2]" aria-busy="true" />;
+  }
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">

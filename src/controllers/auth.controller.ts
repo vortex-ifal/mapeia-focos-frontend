@@ -230,6 +230,24 @@ export function getAuthToken(): string | null {
   return sessionStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+export function hasActiveAgentSession(): boolean {
+  const user = getAuthSession();
+  const token = getAuthToken();
+
+  if (!user || !token || user.role !== "agent" || user.token !== token) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload<JwtAuthPayload>(token);
+
+  return Boolean(
+    payload &&
+      mapRoleToUserRole(payload.role) === "agent" &&
+      typeof payload.exp === "number" &&
+      payload.exp * 1000 > Date.now(),
+  );
+}
+
 export function getAuthSessionSnapshot(): string | null {
   if (typeof window === "undefined") {
     return null;
