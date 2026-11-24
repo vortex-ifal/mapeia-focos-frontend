@@ -10,11 +10,11 @@ import { AgentOccurrenceMap } from "@/components/agent/AgentOccurrenceMap";
 import {
   canStartInspection,
   formatProtocolDisplay,
+  getAgentInspectionPath,
   getAgentOccurrencePriorityPresentation,
   getAgentOccurrenceStatusPresentation,
   getAgentPrioritiesPath,
   getLocationDetails,
-  handleStartInspection,
 } from "@/controllers/agent/agent-occurrence-details.controller";
 import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
 import type { OccurrenceDetailMedia } from "@/types/occurrence-details";
@@ -405,9 +405,8 @@ export function AgentOccurrenceDetails({
             {/* Footer action button */}
             <div className="mt-auto pt-6">
               {canStart ? (
-                <button
-                  type="button"
-                  onClick={handleStartInspection}
+                <Link
+                  href={getAgentInspectionPath(occurrenceId)}
                   className="
                     flex
                     h-[50px]
@@ -421,6 +420,7 @@ export function AgentOccurrenceDetails({
                     text-[15px]
                     font-bold
                     text-white
+                    no-underline
                     transition-all
                     hover:bg-[#B9472E]
                     active:scale-[0.99]
@@ -431,14 +431,14 @@ export function AgentOccurrenceDetails({
                   "
                 >
                   Iniciar vistoria
-                </button>
+                </Link>
               ) : (
                 <div>
                   <button
                     type="button"
                     disabled
                     aria-disabled="true"
-                    title="A vistoria só pode ser iniciada para ocorrências validadas ou encaminhadas para vistoria."
+                    title="A vistoria só pode ser iniciada para ocorrências encaminhadas para vistoria."
                     className="
                       flex
                       h-[50px]
@@ -471,7 +471,7 @@ export function AgentOccurrenceDetails({
                     "
                   >
                     A vistoria só pode ser iniciada quando a ocorrência estiver
-                    validada ou pronta para atendimento.
+                    encaminhada para vistoria.
                   </p>
                 </div>
               )}
