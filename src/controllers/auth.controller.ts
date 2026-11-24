@@ -248,6 +248,24 @@ export function hasActiveAgentSession(): boolean {
   );
 }
 
+export function hasActiveManagerSession(): boolean {
+  const user = getAuthSession();
+  const token = getAuthToken();
+
+  if (!user || !token || user.role !== "manager" || user.token !== token) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload<JwtAuthPayload>(token);
+
+  return Boolean(
+    payload &&
+      mapRoleToUserRole(payload.role) === "manager" &&
+      typeof payload.exp === "number" &&
+      payload.exp * 1000 > Date.now(),
+  );
+}
+
 export function getAuthSessionSnapshot(): string | null {
   if (typeof window === "undefined") {
     return null;

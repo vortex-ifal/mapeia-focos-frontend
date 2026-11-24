@@ -5,6 +5,7 @@ import {
   AGENT_FIELD_DAY_ROUTE,
   AUTH_ROLE_COOKIE,
   AUTH_TOKEN_COOKIE,
+  MANAGER_HOME_ROUTE,
   CITIZEN_HOME_ROUTE,
   LOGIN_ROUTE,
   REGISTER_ROUTE,
@@ -19,6 +20,10 @@ const CITIZEN_ROUTES = [
 ];
 
 const AGENT_ROUTES = [AGENT_FIELD_DAY_ROUTE, "/agente"];
+
+function isManagerRoute(pathname: string): boolean {
+  return pathname === MANAGER_HOME_ROUTE || pathname.startsWith(`${MANAGER_HOME_ROUTE}/`);
+}
 
 function isCitizenRoute(pathname: string): boolean {
   if (pathname === "/" || pathname === CITIZEN_HOME_ROUTE) {
@@ -50,13 +55,18 @@ export function proxy(request: NextRequest) {
     return noStore(NextResponse.redirect(new URL(LOGIN_ROUTE, request.url)));
   }
 
+  // Management pages require both cookies and the manager role.
+  if (isManagerRoute(pathname) && (!authToken || authenticatedRole !== "manager")) {
+    return noStore(NextResponse.redirect(new URL("/gestao/entrar", request.url)));
+  }
+
   // An authenticated agent cannot access citizen pages or the login page.
   if (authenticatedRole === "agent" && (isCitizenRoute(pathname) || pathname === LOGIN_ROUTE)) {
     return NextResponse.redirect(new URL(AGENT_FIELD_DAY_ROUTE, request.url));
   }
 
   const response = NextResponse.next();
-  return isAgentRoute(pathname) ? noStore(response) : response;
+  return isAgentRoute(pathname) || isManagerRoute(pathname) ? noStore(response) : response;
 }
 
 export const config = {
