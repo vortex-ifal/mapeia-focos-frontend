@@ -25,6 +25,8 @@ const occurrenceListItemSchema = z.object({
   updatedAt: z.string(),
   status: operationalStatusSchema,
   priority: operationalPrioritySchema.nullable(),
+  isArchived: z.boolean(),
+  archivedAt: z.string().nullable(),
 });
 
 const occurrencesListResponseSchema = z.object({

@@ -39,6 +39,8 @@ export type OccurrenceDetail = {
   updatedAt: string;
   status: OperationalStatus;
   priority: OperationalPriority | null;
+  isArchived: boolean;
+  archivedAt: string | null;
   assignedAgent: OccurrenceDetailAssignedAgent | null;
   media: OccurrenceDetailMedia[];
 };

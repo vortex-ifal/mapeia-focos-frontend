@@ -38,6 +38,8 @@ const occurrenceDetailSchema = z.object({
   updatedAt: z.string(),
   status: operationalStatusSchema,
   priority: operationalPrioritySchema.nullable(),
+  isArchived: z.boolean(),
+  archivedAt: z.string().nullable(),
   assignedAgent: assignedAgentSchema,
   media: z.array(mediaSchema),
 });
