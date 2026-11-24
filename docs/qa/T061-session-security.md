@@ -16,3 +16,10 @@
 - Requisições HTTP com JWT expirado: `/entrar` retorna 200 com cookies removidos; rotas de agente redirecionam para login com limpeza de cookies.
 - Navegador com cookie de agente válido mas sem sessionStorage (nova aba): redireciona uma vez para login, limpa cookies e mantém login acessível; teste automatizado passou.
 - **Nota de segurança:** o proxy decodifica o token apenas para verificar expiração e coerência do papel; assinatura e autorização real devem ser verificadas pela API. A lógica do cliente não substitui autorização do Back-end.
+
+## Alinhamentos adicionais da revisão
+- Rotas exclusivas de agente e gestor direcionam perfis autenticados diferentes para a área própria, sem exigir um novo login.
+- O componente de logout compartilhado direciona gestores para `/gestao/entrar` e cidadãos/agentes para `/entrar`.
+- Comentários técnicos do `LogoutButton` padronizados em inglês.
+- A PR também mantém `ManagerSessionGuard`, o layout protegido de Gestão e `ManagerLogoutButton`, integrados anteriormente para preservar a consistência entre módulos.
+- A extração opcional de um `AgentSessionGuard` compartilhado foi adiada para uma refatoração específica: as três telas de agente já possuem a mesma verificação, e a mudança estrutural ampliaria o escopo da T061 antes da aprovação.

@@ -7,6 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   clearAuthSession,
   getAuthSessionSnapshot,
+  getAuthSession,
   LOGIN_ROUTE,
   subscribeToAuthSession,
 } from "@/controllers/auth.controller";
@@ -29,10 +30,13 @@ export function LogoutButton({ hasUnsavedDraft = false }: LogoutButtonProps) {
   const isAuthenticated = sessionSnapshot !== null;
 
   function finishLogout() {
+    const destination = getAuthSession()?.role === "manager"
+      ? "/gestao/entrar"
+      : LOGIN_ROUTE;
     clearAuthSession();
     queryClient.clear();
     setConfirmationOpen(false);
-    window.location.replace(LOGIN_ROUTE);
+    window.location.replace(destination);
   }
 
   function handleLogout() {
@@ -64,9 +68,8 @@ export function LogoutButton({ hasUnsavedDraft = false }: LogoutButtonProps) {
   }, [confirmationOpen]);
 
   /*
-   * No módulo Cidadão, a Home também pode
-   * existir sem sessão. Nesse caso, não
-   * exibimos a ação de logout.
+   * The citizen home is accessible anonymously.
+   * Do not display logout when there is no active session.
    */
   if (!isAuthenticated) {
     return null;

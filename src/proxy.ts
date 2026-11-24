@@ -85,14 +85,24 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Protected agent routes require both authentication cookies.
+  // Protected agent routes require an active agent session.
   if (isAgentRoute(pathname) && (!authToken || authenticatedRole !== "agent")) {
-    return finish(noStore(NextResponse.redirect(new URL(LOGIN_ROUTE, request.url))));
+    const destination = authenticatedRole === "citizen"
+      ? CITIZEN_HOME_ROUTE
+      : authenticatedRole === "manager"
+        ? MANAGER_HOME_ROUTE
+        : LOGIN_ROUTE;
+    return finish(noStore(NextResponse.redirect(new URL(destination, request.url))));
   }
 
-  // Management pages require both cookies and the manager role.
+  // Management pages require a manager role; send other known roles home.
   if (isManagerRoute(pathname) && (!authToken || authenticatedRole !== "manager")) {
-    return finish(noStore(NextResponse.redirect(new URL("/gestao/entrar", request.url))));
+    const destination = authenticatedRole === "citizen"
+      ? CITIZEN_HOME_ROUTE
+      : authenticatedRole === "agent"
+        ? AGENT_FIELD_DAY_ROUTE
+        : "/gestao/entrar";
+    return finish(noStore(NextResponse.redirect(new URL(destination, request.url))));
   }
 
   // An authenticated agent cannot access citizen pages or the login page.
