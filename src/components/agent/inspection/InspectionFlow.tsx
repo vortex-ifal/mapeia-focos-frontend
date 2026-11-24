@@ -1,10 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 
 import { InspectionRegistrationStep } from "@/components/agent/inspection/InspectionRegistrationStep";
@@ -14,23 +16,24 @@ import {
   getLocationDetails,
 } from "@/controllers/agent/agent-occurrence-details.controller";
 import {
+  clearLocalInspectionDraft,
   formatInspectionHeaderTitle,
   formatInspectionSummaryContext,
+  getEmptyInspectionDraft,
   getLocalInspectionDraft,
   mergeRemoteWithLocalDraft,
   saveLocalInspectionDraft,
 } from "@/controllers/agent/inspection.controller";
-import type { InspectionRegistrationFormData } from "@/schemas/inspection.schema";
+import {
+  inspectionRegistrationSchema,
+  type InspectionRegistrationFormData,
+} from "@/schemas/inspection.schema";
 import {
   getInspectionDraft,
   saveInspectionDraft,
 } from "@/services/api/inspection.service";
 import { getOccurrenceDetails } from "@/services/api/occurrence-details.service";
-import type {
-  InspectionApiResponse,
-  InspectionDraft,
-  InspectionStep,
-} from "@/types/inspection";
+import type { InspectionDraft, InspectionStep } from "@/types/inspection";
 
 type InspectionFlowProps = {
   occurrenceId: string;
@@ -40,19 +43,30 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
   const router = useRouter();
 
   const [step, setStep] = useState<InspectionStep>("register");
-  const [draft, setDraft] = useState<InspectionDraft>(() =>
-    getLocalInspectionDraft(occurrenceId),
-  );
-  const [remoteDraft, setRemoteDraft] = useState<InspectionApiResponse | null>(
-    null,
-  );
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isDraftSaved, setIsDraftSaved] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
-  const [draftSavedAtMessage, setDraftSavedAtMessage] = useState<string | null>(
-    null,
-  );
+  const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
+  const [draftFetchTrigger, setDraftFetchTrigger] = useState(0);
+
+  const hasLocalDraftRef = useRef(false);
+  const hasHydratedRemoteRef = useRef(false);
 
   const occurrenceDetailsPath = getAgentOccurrenceDetailsPath(occurrenceId);
+
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    getFieldState,
+    setValue,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<InspectionRegistrationFormData>({
+    resolver: zodResolver(inspectionRegistrationSchema),
+    defaultValues: getEmptyInspectionDraft(),
+  });
 
   const occurrenceQuery = useQuery({
     queryKey: ["agent", "occurrence", occurrenceId],
@@ -62,107 +76,170 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
     retry: 1,
   });
 
+  const occurrence = occurrenceQuery.data;
+  const canInspect = occurrence ? canStartInspection(occurrence.status) : true;
+
+  // Hydrate from sessionStorage once on client mount to avoid SSR hydration mismatches.
   useEffect(() => {
+    const localDraft = getLocalInspectionDraft(occurrenceId);
+    if (localDraft !== null) {
+      hasLocalDraftRef.current = true;
+      reset(localDraft);
+    }
+  }, [occurrenceId, reset]);
+
+  // Keep sessionStorage synced and clear saved-draft notice when user edits fields.
+  const handleFormChange = useCallback(() => {
+    const currentValues = getValues();
+    hasLocalDraftRef.current = true;
+    setIsDraftSaved(false);
+    setDraftError(null);
+
+    saveLocalInspectionDraft(occurrenceId, {
+      condition: currentValues.condition ?? "",
+      actionsTaken: currentValues.actionsTaken ?? "",
+      notes: currentValues.notes ?? "",
+    });
+  }, [getValues, occurrenceId]);
+
+  // Fetch remote draft once the occurrence is confirmed eligible for inspection.
+  useEffect(() => {
+    if (!occurrence || !canInspect || hasHydratedRemoteRef.current) {
+      return;
+    }
+
     let cancelled = false;
 
     getInspectionDraft(occurrenceId)
       .then((remote) => {
-        if (cancelled || !remote) {
+        if (cancelled) {
           return;
         }
-        setRemoteDraft(remote);
-        setDraft((previous) => mergeRemoteWithLocalDraft(previous, remote));
+
+        setDraftLoadError(null);
+        hasHydratedRemoteRef.current = true;
+
+        if (!remote || hasLocalDraftRef.current) {
+          return;
+        }
+
+        const merged = mergeRemoteWithLocalDraft(null, remote);
+
+        if (!getFieldState("condition").isDirty && merged.condition) {
+          setValue("condition", merged.condition, { shouldDirty: false });
+        }
+        if (!getFieldState("actionsTaken").isDirty && merged.actionsTaken) {
+          setValue("actionsTaken", merged.actionsTaken, { shouldDirty: false });
+        }
+        if (!getFieldState("notes").isDirty && merged.notes) {
+          setValue("notes", merged.notes, { shouldDirty: false });
+        }
+
+        const hasRemoteContent = Boolean(
+          merged.condition || merged.actionsTaken || merged.notes,
+        );
+        if (
+          hasRemoteContent &&
+          !getFieldState("condition").isDirty &&
+          !getFieldState("actionsTaken").isDirty &&
+          !getFieldState("notes").isDirty
+        ) {
+          setIsDraftSaved(true);
+        }
       })
-      .catch(() => {
-        // Remote draft lookup is non-blocking; local session draft remains available.
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        setDraftLoadError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar o rascunho salvo.",
+        );
       });
 
     return () => {
       cancelled = true;
     };
-  }, [occurrenceId]);
+  }, [
+    occurrence,
+    canInspect,
+    occurrenceId,
+    draftFetchTrigger,
+    getFieldState,
+    setValue,
+  ]);
 
-  useEffect(() => {
-    saveLocalInspectionDraft(occurrenceId, draft);
-  }, [draft, occurrenceId]);
+  const handleRetryDraftLoad = useCallback(() => {
+    setDraftLoadError(null);
+    hasHydratedRemoteRef.current = false;
+    setDraftFetchTrigger((previous) => previous + 1);
+  }, []);
 
-  const handleDraftFieldsChange = useCallback(
-    (values: InspectionRegistrationFormData) => {
-      setDraft((previous) => {
-        if (
-          previous.condition === values.condition &&
-          previous.actionsTaken === values.actionsTaken &&
-          previous.notes === values.notes
-        ) {
-          return previous;
-        }
-        return {
-          condition: values.condition,
-          actionsTaken: values.actionsTaken,
-          notes: values.notes,
-        };
-      });
-    },
-    [],
-  );
+  const handleSaveDraft = useCallback(async () => {
+    if (isSavingDraft) {
+      return;
+    }
 
-  const handleSaveDraft = useCallback(
-    async (values: InspectionRegistrationFormData) => {
-      if (isSavingDraft) {
-        return;
-      }
+    const currentValues = getValues();
+    const hasAnyValue =
+      currentValues.condition.trim().length > 0 ||
+      currentValues.actionsTaken.trim().length > 0 ||
+      currentValues.notes.trim().length > 0;
 
-      const hasAnyValue =
-        values.condition.trim().length > 0 ||
-        values.actionsTaken.trim().length > 0 ||
-        values.notes.trim().length > 0;
+    if (!hasAnyValue) {
+      toast.info("Preencha ao menos um campo antes de salvar o rascunho.");
+      return;
+    }
 
-      if (!hasAnyValue) {
-        toast.info("Preencha ao menos um campo antes de salvar o rascunho.");
-        return;
-      }
+    setDraftError(null);
+    setIsSavingDraft(true);
 
-      setDraftError(null);
-      setDraftSavedAtMessage(null);
-      setIsSavingDraft(true);
+    const draftPayload: InspectionDraft = {
+      condition: currentValues.condition,
+      actionsTaken: currentValues.actionsTaken,
+      notes: currentValues.notes,
+    };
 
-      const updatedDraft: InspectionDraft = {
-        condition: values.condition,
-        actionsTaken: values.actionsTaken,
-        notes: values.notes,
-      };
-      setDraft(updatedDraft);
-      saveLocalInspectionDraft(occurrenceId, updatedDraft);
+    hasLocalDraftRef.current = true;
+    saveLocalInspectionDraft(occurrenceId, draftPayload);
 
-      try {
-        const saved = await saveInspectionDraft(occurrenceId, updatedDraft);
-        setRemoteDraft(saved);
-        setDraftSavedAtMessage("Rascunho salvo com sucesso.");
-        toast.success("Rascunho salvo com sucesso.");
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Não foi possível salvar o rascunho na API.";
-        setDraftError(message);
-        toast.error(message);
-      } finally {
-        setIsSavingDraft(false);
-      }
-    },
-    [isSavingDraft, occurrenceId],
-  );
+    try {
+      await saveInspectionDraft(occurrenceId, draftPayload);
+      setIsDraftSaved(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar o rascunho na API.";
+      setIsDraftSaved(false);
+      setDraftError(message);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [getValues, isSavingDraft, occurrenceId]);
+
+  const handleDiscardDraft = useCallback(() => {
+    clearLocalInspectionDraft(occurrenceId);
+    hasLocalDraftRef.current = false;
+    hasHydratedRemoteRef.current = true;
+    setIsDraftSaved(false);
+    setDraftError(null);
+    setDraftLoadError(null);
+    reset(getEmptyInspectionDraft());
+    toast.info("Rascunho descartado.");
+  }, [occurrenceId, reset]);
 
   const handleProceedToOutcome = useCallback(
     (values: InspectionRegistrationFormData) => {
       setDraftError(null);
-      const updatedDraft: InspectionDraft = {
+      const validatedDraft: InspectionDraft = {
         condition: values.condition.trim(),
         actionsTaken: values.actionsTaken.trim(),
         notes: values.notes.trim(),
       };
-      setDraft(updatedDraft);
-      saveLocalInspectionDraft(occurrenceId, updatedDraft);
+      saveLocalInspectionDraft(occurrenceId, validatedDraft);
       setStep("outcome_placeholder");
     },
     [occurrenceId],
@@ -179,7 +256,6 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
     router.push(occurrenceDetailsPath);
   }
 
-  const occurrence = occurrenceQuery.data;
   const headerTitle =
     step === "register"
       ? occurrenceQuery.isPending
@@ -193,8 +269,6 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
   const summaryContext = occurrence
     ? formatInspectionSummaryContext(occurrence)
     : "Localização da ocorrência";
-
-  const canInspect = occurrence ? canStartInspection(occurrence.status) : true;
 
   return (
     <main className="min-h-dvh bg-[#FBF8F2] text-[#171717]">
@@ -263,7 +337,7 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
             </h2>
             <p className="mt-1.5 text-[13px] leading-relaxed text-[#716B67]">
               A vistoria só pode ser registrada quando a ocorrência estiver
-              validada ou pronta para atendimento.
+              encaminhada para vistoria.
             </p>
             <Link
               href={occurrenceDetailsPath}
@@ -280,14 +354,20 @@ export function InspectionFlow({ occurrenceId }: InspectionFlowProps) {
               <InspectionRegistrationStep
                 street={street}
                 summaryContext={summaryContext}
-                draft={draft}
-                remoteDraft={remoteDraft}
+                register={register}
+                control={control}
+                errors={errors}
                 isSavingDraft={isSavingDraft}
+                isDraftSaved={isDraftSaved}
                 draftError={draftError}
-                draftSavedAtMessage={draftSavedAtMessage}
-                onDraftFieldsChange={handleDraftFieldsChange}
-                onSaveDraft={handleSaveDraft}
-                onProceedToOutcome={handleProceedToOutcome}
+                draftLoadError={draftLoadError}
+                onRetryDraftLoad={handleRetryDraftLoad}
+                onSaveDraft={() => {
+                  void handleSaveDraft();
+                }}
+                onDiscardDraft={handleDiscardDraft}
+                onFormChange={handleFormChange}
+                onSubmit={handleSubmit(handleProceedToOutcome)}
               />
             ) : (
               <section

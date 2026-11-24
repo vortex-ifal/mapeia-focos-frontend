@@ -438,7 +438,7 @@ export function AgentOccurrenceDetails({
                     type="button"
                     disabled
                     aria-disabled="true"
-                    title="A vistoria só pode ser iniciada para ocorrências validadas ou encaminhadas para vistoria."
+                    title="A vistoria só pode ser iniciada para ocorrências encaminhadas para vistoria."
                     className="
                       flex
                       h-[50px]
@@ -471,7 +471,7 @@ export function AgentOccurrenceDetails({
                     "
                   >
                     A vistoria só pode ser iniciada quando a ocorrência estiver
-                    validada ou pronta para atendimento.
+                    encaminhada para vistoria.
                   </p>
                 </div>
               )}

@@ -1,131 +1,89 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown } from "lucide-react";
-import { useEffect, useMemo } from "react";
-import { useForm, useWatch } from "react-hook-form";
-
-import { INSPECTION_CONDITION_OPTIONS } from "@/controllers/agent/inspection.controller";
+import type { FormEventHandler } from "react";
+import { useMemo } from "react";
 import {
-  inspectionRegistrationSchema,
-  type InspectionRegistrationFormData,
-} from "@/schemas/inspection.schema";
-import type { InspectionApiResponse, InspectionDraft } from "@/types/inspection";
+  useWatch,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
+
+import { FeedbackAlert } from "@/components/ui/FeedbackAlert";
+import { INSPECTION_CONDITION_OPTIONS } from "@/controllers/agent/inspection.controller";
+import type { InspectionRegistrationFormData } from "@/schemas/inspection.schema";
 
 type InspectionRegistrationStepProps = {
   street: string;
   summaryContext: string;
-  draft: InspectionDraft;
-  remoteDraft: InspectionApiResponse | null;
+  register: UseFormRegister<InspectionRegistrationFormData>;
+  control: Control<InspectionRegistrationFormData>;
+  errors: FieldErrors<InspectionRegistrationFormData>;
   isSavingDraft: boolean;
+  isDraftSaved: boolean;
   draftError: string | null;
-  draftSavedAtMessage: string | null;
-  onDraftFieldsChange: (values: InspectionRegistrationFormData) => void;
-  onSaveDraft: (values: InspectionRegistrationFormData) => Promise<void>;
-  onProceedToOutcome: (values: InspectionRegistrationFormData) => void;
+  draftLoadError: string | null;
+  onRetryDraftLoad: () => void;
+  onSaveDraft: () => void;
+  onDiscardDraft: () => void;
+  onFormChange: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
 };
 
 export function InspectionRegistrationStep({
   street,
   summaryContext,
-  draft,
-  remoteDraft,
+  register,
+  control,
+  errors,
   isSavingDraft,
+  isDraftSaved,
   draftError,
-  draftSavedAtMessage,
-  onDraftFieldsChange,
+  draftLoadError,
+  onRetryDraftLoad,
   onSaveDraft,
-  onProceedToOutcome,
+  onDiscardDraft,
+  onFormChange,
+  onSubmit,
 }: InspectionRegistrationStepProps) {
-  const {
-    register,
-    handleSubmit,
-    getValues,
-    setValue,
-    control,
-    formState: { errors, dirtyFields },
-  } = useForm<InspectionRegistrationFormData>({
-    resolver: zodResolver(inspectionRegistrationSchema),
-    defaultValues: {
-      condition: draft.condition,
-      actionsTaken: draft.actionsTaken,
-      notes: draft.notes,
-    },
-  });
-
-  // Merge remote draft values into fields that the agent has not edited locally.
-  useEffect(() => {
-    if (!remoteDraft) {
-      return;
-    }
-
-    const currentValues = getValues();
-
-    if (
-      !dirtyFields.condition &&
-      !currentValues.condition &&
-      remoteDraft.condition
-    ) {
-      setValue("condition", remoteDraft.condition, { shouldDirty: false });
-    }
-
-    if (
-      !dirtyFields.actionsTaken &&
-      !currentValues.actionsTaken &&
-      remoteDraft.actionsTaken
-    ) {
-      setValue("actionsTaken", remoteDraft.actionsTaken, {
-        shouldDirty: false,
-      });
-    }
-
-    if (!dirtyFields.notes && !currentValues.notes && remoteDraft.notes) {
-      setValue("notes", remoteDraft.notes, { shouldDirty: false });
-    }
-  }, [remoteDraft, dirtyFields, getValues, setValue]);
-
-  const watchedValues = useWatch({ control });
-  const selectedCondition = watchedValues.condition ?? "";
-
-  useEffect(() => {
-    onDraftFieldsChange({
-      condition: watchedValues.condition ?? "",
-      actionsTaken: watchedValues.actionsTaken ?? "",
-      notes: watchedValues.notes ?? "",
-    });
-  }, [
-    watchedValues.condition,
-    watchedValues.actionsTaken,
-    watchedValues.notes,
-    onDraftFieldsChange,
-  ]);
+  const selectedCondition =
+    useWatch({
+      control,
+      name: "condition",
+    }) ?? "";
 
   const conditionOptions = useMemo(() => {
     const baseOptions: string[] = [...INSPECTION_CONDITION_OPTIONS];
-    if (
-      selectedCondition &&
-      !baseOptions.includes(selectedCondition)
-    ) {
+    if (selectedCondition && !baseOptions.includes(selectedCondition)) {
       return [selectedCondition, ...baseOptions];
     }
     return baseOptions;
   }, [selectedCondition]);
 
-  function handleSaveDraftClick() {
-    const current = getValues();
-    void onSaveDraft({
-      condition: current.condition ?? "",
-      actionsTaken: current.actionsTaken ?? "",
-      notes: current.notes ?? "",
-    });
-  }
-
   return (
     <form
       noValidate
-      onSubmit={handleSubmit(onProceedToOutcome)}
+      onChange={onFormChange}
+      onSubmit={onSubmit}
       className="flex flex-1 flex-col gap-3.5"
     >
+      {draftLoadError ? (
+        <div
+          role="alert"
+          className="rounded-[12px] bg-[#F8E3E0] px-3.5 py-2.5 text-[12px] text-[#9D352D]"
+        >
+          <p>{draftLoadError}</p>
+          <button
+            type="button"
+            onClick={onRetryDraftLoad}
+            className="mt-1.5 text-[12px] font-bold text-[#9D352D] underline underline-offset-2"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
       {/* Occurrence summary card */}
       <section
         aria-label="Resumo da ocorrência"
@@ -156,9 +114,8 @@ export function InspectionRegistrationStep({
             aria-describedby={
               errors.condition ? "inspection-condition-error" : undefined
             }
-            className={`w-full appearance-none bg-transparent pr-7 text-[14px] outline-none ${
-              selectedCondition ? "text-[#171717]" : "text-[#716B67]"
-            }`}
+            className={`w-full appearance-none bg-transparent pr-7 text-[14px] outline-none ${selectedCondition ? "text-[#171717]" : "text-[#716B67]"
+              }`}
           >
             <option value="" disabled>
               Escolha uma opção
@@ -201,6 +158,7 @@ export function InspectionRegistrationStep({
         <textarea
           id="inspection-actions"
           rows={3}
+          maxLength={1000}
           {...register("actionsTaken")}
           placeholder="Registre as ações executadas"
           aria-invalid={Boolean(errors.actionsTaken)}
@@ -263,19 +221,13 @@ export function InspectionRegistrationStep({
         </p>
       ) : null}
 
-      {draftSavedAtMessage ? (
-        <p role="status" className="text-center text-[12px] text-[#716B67]">
-          {draftSavedAtMessage}
-        </p>
-      ) : null}
-
       {/* Actions */}
       <div className="mt-auto flex flex-col gap-3 pt-2">
         <button
           type="button"
           disabled={isSavingDraft}
           aria-busy={isSavingDraft || undefined}
-          onClick={handleSaveDraftClick}
+          onClick={onSaveDraft}
           className="flex h-[50px] w-full items-center justify-center rounded-[14px] border border-[#E9E0D4] bg-white px-4 text-center text-[15px] font-bold text-[#171717] transition hover:bg-[#F4EFE6] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSavingDraft ? "Salvando rascunho..." : "Salvar rascunho"}
@@ -287,6 +239,21 @@ export function InspectionRegistrationStep({
         >
           Definir desfecho
         </button>
+
+        {isDraftSaved ? (
+          <FeedbackAlert className="mt-0.5">
+            <span className="block">
+              Rascunho salvo. Você pode continuar antes da conclusão.
+            </span>
+            <button
+              type="button"
+              onClick={onDiscardDraft}
+              className="mt-1.5 inline-block text-[12px] font-bold text-[#9D352D] underline underline-offset-2 transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C94F32]"
+            >
+              Descartar rascunho
+            </button>
+          </FeedbackAlert>
+        ) : null}
       </div>
     </form>
   );

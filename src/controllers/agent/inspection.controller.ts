@@ -74,22 +74,27 @@ export function getInspectionDraftStorageKey(occurrenceId: string): string {
   return `mapeia-inspection-draft:${agentId}:${occurrenceId}`;
 }
 
-export function getLocalInspectionDraft(occurrenceId: string): InspectionDraft {
-  const emptyDraft = getEmptyInspectionDraft();
-
+/**
+ * Reads the locally saved draft from sessionStorage.
+ * Returns null when no local draft has been stored yet, preserving
+ * intentionally cleared empty strings when a draft record already exists.
+ */
+export function getLocalInspectionDraft(
+  occurrenceId: string,
+): InspectionDraft | null {
   if (typeof window === "undefined") {
-    return emptyDraft;
+    return null;
   }
 
   try {
     const raw = sessionStorage.getItem(getInspectionDraftStorageKey(occurrenceId));
     if (!raw) {
-      return emptyDraft;
+      return null;
     }
 
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") {
-      return emptyDraft;
+      return null;
     }
 
     const record = parsed as Partial<InspectionDraft>;
@@ -101,7 +106,7 @@ export function getLocalInspectionDraft(occurrenceId: string): InspectionDraft {
       notes: typeof record.notes === "string" ? record.notes : "",
     };
   } catch {
-    return emptyDraft;
+    return null;
   }
 }
 
@@ -123,17 +128,37 @@ export function saveLocalInspectionDraft(
   }
 }
 
+export function clearLocalInspectionDraft(occurrenceId: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    sessionStorage.removeItem(getInspectionDraftStorageKey(occurrenceId));
+  } catch {
+    // Ignore storage removal errors.
+  }
+}
+
+/**
+ * Merges the remote draft only when there is no local draft record yet,
+ * so fields explicitly cleared to "" locally are never overwritten.
+ */
 export function mergeRemoteWithLocalDraft(
-  localDraft: InspectionDraft,
+  localDraft: InspectionDraft | null,
   remoteDraft: InspectionApiResponse | null,
 ): InspectionDraft {
-  if (!remoteDraft) {
+  if (localDraft !== null) {
     return localDraft;
   }
 
+  if (!remoteDraft) {
+    return getEmptyInspectionDraft();
+  }
+
   return {
-    condition: localDraft.condition || remoteDraft.condition || "",
-    actionsTaken: localDraft.actionsTaken || remoteDraft.actionsTaken || "",
-    notes: localDraft.notes || remoteDraft.notes || "",
+    condition: remoteDraft.condition ?? "",
+    actionsTaken: remoteDraft.actionsTaken ?? "",
+    notes: remoteDraft.notes ?? "",
   };
 }

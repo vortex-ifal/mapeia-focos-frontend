@@ -10,7 +10,8 @@ export const inspectionRegistrationSchema = z.object({
   actionsTaken: z
     .string()
     .trim()
-    .min(1, "Informe as ações realizadas."),
+    .min(1, "Informe as ações realizadas.")
+    .max(1000, "As ações realizadas devem ter no máximo 1000 caracteres."),
 
   notes: z
     .string()

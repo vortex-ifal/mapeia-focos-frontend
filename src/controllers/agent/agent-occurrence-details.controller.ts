@@ -69,7 +69,7 @@ export function canStartInspection(
   }
 
   const key = typeof status === "string" ? status : status.key;
-  return key === "accepted" || key === "forwarded_for_inspection";
+  return key === "forwarded_for_inspection";
 }
 
 export function getAgentOccurrencePriorityPresentation(
